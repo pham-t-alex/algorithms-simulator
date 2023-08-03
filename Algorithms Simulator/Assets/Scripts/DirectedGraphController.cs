@@ -29,6 +29,12 @@ public class DirectedGraphController : MonoBehaviour
             return screenCamera;
         }
     }
+
+    private List<GraphVertex> vertices = new List<GraphVertex>();
+    private List<DirectedEdge> edges = new List<DirectedEdge>();
+
+    private bool frozen = false;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -38,7 +44,11 @@ public class DirectedGraphController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        MoveCamera();
+        if (!frozen)
+        {
+            MoveCamera();
+        }
+        
     }
 
     public void MoveCamera()
@@ -67,5 +77,29 @@ public class DirectedGraphController : MonoBehaviour
         {
             ScreenCamera.orthographicSize *= 1.002f;
         }
+    }
+
+    public void CreateVertex()
+    {
+        Vector3 position = ScreenCamera.transform.position;
+        position.z = 0;
+        vertices.Add(Instantiate(Resources.Load<GameObject>("Prefabs/Vertex"), position, Quaternion.identity, GameObject.Find("Vertices").transform).GetComponent<GraphVertex>());
+    }
+
+    public void CreateEdge()
+    {
+        Vector3 position = ScreenCamera.transform.position;
+        position.z = 0;
+        edges.Add(Instantiate(Resources.Load<GameObject>("Prefabs/DirectedEdge"), position, Quaternion.identity, GameObject.Find("Edges").transform).GetComponent<DirectedEdge>());
+    }
+
+    public void Freeze()
+    {
+        frozen = true;
+    }
+
+    public void Unfreeze()
+    {
+        frozen = false;
     }
 }
