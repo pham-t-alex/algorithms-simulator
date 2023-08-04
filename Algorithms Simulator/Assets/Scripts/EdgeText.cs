@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class VertexText : InputText
+public class EdgeText : InputText
 {
     // Start is called before the first frame update
     void Start()
@@ -16,7 +16,7 @@ public class VertexText : InputText
         
     }
 
-    public void UpdateVertexName()
+    public void UpdateEdgeWeight()
     {
 
     }

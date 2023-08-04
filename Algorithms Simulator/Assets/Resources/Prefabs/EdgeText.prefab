@@ -149,7 +149,7 @@ GameObject:
   - component: {fileID: 5007603954329233786}
   - component: {fileID: 6904254038513914465}
   m_Layer: 5
-  m_Name: VertexText
+  m_Name: EdgeText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -345,7 +345,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 3685432523562585363}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f590fcd7cf5d0d840870ec7a386e50b0, type: 3}
+  m_Script: {fileID: 11500000, guid: 60194ce880eca0240977c26e1671b911, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &3880454510398186200
@@ -468,7 +468,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: '?'
+  m_text: 0
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 381a79a2da2efdb41a3786e84d42b3c8, type: 2}
   m_sharedMaterial: {fileID: -5013723655748893096, guid: 381a79a2da2efdb41a3786e84d42b3c8, type: 2}

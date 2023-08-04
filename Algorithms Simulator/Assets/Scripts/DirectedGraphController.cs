@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class DirectedGraphController : MonoBehaviour
 {
@@ -34,6 +35,20 @@ public class DirectedGraphController : MonoBehaviour
     private List<DirectedEdge> edges = new List<DirectedEdge>();
 
     private bool frozen = false;
+    private bool runningAlgorithm = false;
+    [SerializeField] private GameObject selectedObject;
+    private float selectedTime = float.MinValue;
+    private Vector3 prevMousePosition;
+
+    public Vector3 MousePosition
+    {
+        get
+        {
+            Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            mousePosition.z = 0;
+            return mousePosition;
+        }
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -48,7 +63,15 @@ public class DirectedGraphController : MonoBehaviour
         {
             MoveCamera();
         }
-        
+        if (runningAlgorithm)
+        {
+
+        }
+        else
+        {
+            NotRunningAlgorithms();
+        }
+        prevMousePosition = MousePosition;
     }
 
     public void MoveCamera()
@@ -101,5 +124,56 @@ public class DirectedGraphController : MonoBehaviour
     public void Unfreeze()
     {
         frozen = false;
+    }
+
+    public void NotRunningAlgorithms()
+    {
+        if (selectedObject != null)
+        {
+            if (selectedObject.tag == "Vertex")
+            {
+                if (selectedTime > 0)
+                {
+                    selectedObject.transform.position += MousePosition - prevMousePosition;
+                    selectedObject.GetComponent<GraphVertex>().UpdatePosition();
+                }
+                else if (selectedTime > float.MinValue)
+                {
+                    selectedTime = float.MinValue;
+                    selectedObject = null;
+                }
+            }
+        }
+        if (Input.GetMouseButtonDown(0))
+        {
+            if (selectedObject == null)
+            {
+                foreach (GraphVertex vertex in vertices)
+                {
+                    if (vertex.MouseTouching)
+                    {
+                        selectedObject = vertex.gameObject;
+                        selectedTime = 0.05f;
+                        return;
+                    }
+                }
+                foreach (Edge edge in edges)
+                {
+                    if (edge.MouseTouching)
+                    {
+                        selectedObject = edge.gameObject;
+                        return;
+                    }
+                }
+            }
+            
+        }
+        if (!Input.GetMouseButton(0))
+        {
+            if (selectedTime > 0)
+            {
+                selectedTime -= Time.deltaTime;
+            }
+        }
     }
 }
