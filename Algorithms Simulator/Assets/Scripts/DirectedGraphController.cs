@@ -32,13 +32,26 @@ public class DirectedGraphController : MonoBehaviour
     }
 
     private List<GraphVertex> vertices = new List<GraphVertex>();
-    private List<DirectedEdge> edges = new List<DirectedEdge>();
+    private List<Edge> edges = new List<Edge>();
 
     private bool frozen = false;
     private bool runningAlgorithm = false;
     [SerializeField] private GameObject selectedObject;
+    private GraphVertex edgeSourceSelected;
     private float selectedTime = float.MinValue;
     private Vector3 prevMousePosition;
+
+    [SerializeField] private GameObject weightedCheckmark;
+    [SerializeField] private GameObject createGraphUI;
+    [SerializeField] private GameObject algsMenu;
+    private bool weighted = true;
+    public bool Weighted
+    {
+        get
+        {
+            return weighted;
+        }
+    }
 
     public Vector3 MousePosition
     {
@@ -113,7 +126,7 @@ public class DirectedGraphController : MonoBehaviour
     {
         Vector3 position = ScreenCamera.transform.position;
         position.z = 0;
-        edges.Add(Instantiate(Resources.Load<GameObject>("Prefabs/DirectedEdge"), position, Quaternion.identity, GameObject.Find("Edges").transform).GetComponent<DirectedEdge>());
+        edges.Add(Instantiate(Resources.Load<GameObject>("Prefabs/DirectedEdge"), position, Quaternion.identity, GameObject.Find("Edges").transform).GetComponent<Edge>());
     }
 
     public void Freeze()
@@ -140,6 +153,7 @@ public class DirectedGraphController : MonoBehaviour
                 else if (selectedTime > float.MinValue)
                 {
                     selectedTime = float.MinValue;
+                    selectedObject.GetComponent<GraphVertex>().SetColor(Color.white);
                     selectedObject = null;
                 }
             }
@@ -153,6 +167,7 @@ public class DirectedGraphController : MonoBehaviour
                     if (vertex.MouseTouching)
                     {
                         selectedObject = vertex.gameObject;
+                        vertex.SetColor(new Color(0.8f, 0.8f, 0.8f));
                         selectedTime = 0.05f;
                         return;
                     }
@@ -162,11 +177,47 @@ public class DirectedGraphController : MonoBehaviour
                     if (edge.MouseTouching)
                     {
                         selectedObject = edge.gameObject;
+                        edge.SetColor(new Color(0.8f, 0.8f, 0.8f));
                         return;
                     }
                 }
             }
-            
+            else if (selectedObject.tag == "Edge")
+            {
+                bool foundNothing = true;
+                foreach (GraphVertex vertex in vertices)
+                {
+                    if (vertex.MouseTouching)
+                    {
+                        foundNothing = false;
+                        if (edgeSourceSelected != null)
+                        {
+                            selectedObject.GetComponent<Edge>().SetVertices(edgeSourceSelected, vertex);
+                            selectedObject.GetComponent<Edge>().SetColor(Color.white);
+                            selectedObject = null;
+                            edgeSourceSelected.SetColor(Color.white);
+                            edgeSourceSelected = null;
+                            return;
+                        }
+                        else
+                        {
+                            edgeSourceSelected = vertex;
+                            edgeSourceSelected.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                            return;
+                        }
+                    }
+                }
+                if (foundNothing)
+                {
+                    selectedObject.GetComponent<Edge>().SetColor(Color.white);
+                    selectedObject = null;
+                    if (edgeSourceSelected != null)
+                    {
+                        edgeSourceSelected.SetColor(Color.white);
+                    }
+                    edgeSourceSelected = null;
+                }
+            }
         }
         if (!Input.GetMouseButton(0))
         {
@@ -175,5 +226,41 @@ public class DirectedGraphController : MonoBehaviour
                 selectedTime -= Time.deltaTime;
             }
         }
+    }
+
+    public void Back()
+    {
+        if (algsMenu.activeSelf)
+        {
+
+        }
+        UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
+    }
+
+    public void ToggleWeighted()
+    {
+        if (weighted)
+        {
+            weighted = false;
+            weightedCheckmark.SetActive(false);
+            foreach (Edge e in edges)
+            {
+                e.HideWeight();
+            }
+        }
+        else
+        {
+            weighted = true;
+            weightedCheckmark.SetActive(true);
+            foreach (Edge e in edges)
+            {
+                e.ShowWeight();
+            }
+        }
+    }
+
+    public void OpenAlgMenu()
+    {
+
     }
 }
