@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class VertexText : InputText
 {
+    private GraphVertex vertex;
     // Start is called before the first frame update
     void Start()
     {
@@ -16,8 +17,13 @@ public class VertexText : InputText
         
     }
 
-    public void UpdateVertexName()
+    public void UpdateVertexName(string s)
     {
+        vertex.SetName(s);
+    }
 
+    public void SetVertex(GraphVertex v)
+    {
+        vertex = v;
     }
 }

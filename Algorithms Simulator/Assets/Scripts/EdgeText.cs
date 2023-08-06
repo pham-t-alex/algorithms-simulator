@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class EdgeText : InputText
 {
+    private Edge edge;
     // Start is called before the first frame update
     void Start()
     {
@@ -16,8 +17,17 @@ public class EdgeText : InputText
         
     }
 
-    public void UpdateEdgeWeight()
+    public void SetEdge(Edge e)
     {
-
+        edge = e;
     }
+
+    public void UpdateEdgeWeight(string s)
+    {
+        if (!edge.SetWeight(s))
+        {
+            GetComponent<TMPro.TMP_InputField>().text = "";
+        }
+    }
+
 }

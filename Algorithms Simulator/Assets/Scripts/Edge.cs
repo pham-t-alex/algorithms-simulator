@@ -1,10 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
 
 public class Edge : MonoBehaviour
 {
-    private int weight;
+    private float weight;
     private bool mouseTouching;
     public bool MouseTouching
     {
@@ -14,6 +15,7 @@ public class Edge : MonoBehaviour
         }
     }
     private EdgeText weightInput;
+    private GameObject edgeInfoText;
 
     private GraphVertex source;
     public GraphVertex Source
@@ -41,6 +43,7 @@ public class Edge : MonoBehaviour
         {
             HideWeight();
         }
+        weightInput.SetEdge(this);
     }
 
     // Update is called once per frame
@@ -148,5 +151,24 @@ public class Edge : MonoBehaviour
     public void ShowWeight()
     {
         weightInput.gameObject.SetActive(true);
+    }
+
+    public bool SetWeight(string weight)
+    {
+        float newWeight;
+
+        bool success = float.TryParse(weight, out newWeight);
+        if (!success)
+        {
+            this.weight = 0;
+            return false;
+        }
+        this.weight = newWeight;
+        return true;
+    }
+
+    public void CreateInfoText()
+    {
+        weightInput.GetComponent<TMP_InputField>().interactable = false;
     }
 }

@@ -36,6 +36,7 @@ public class DirectedGraphController : MonoBehaviour
 
     private bool frozen = false;
     private bool runningAlgorithm = false;
+    private bool selectingPhase = false;
     [SerializeField] private GameObject selectedObject;
     private GraphVertex edgeSourceSelected;
     private float selectedTime = float.MinValue;
@@ -44,6 +45,9 @@ public class DirectedGraphController : MonoBehaviour
     [SerializeField] private GameObject weightedCheckmark;
     [SerializeField] private GameObject createGraphUI;
     [SerializeField] private GameObject algsMenu;
+    [SerializeField] private List<GameObject> algButtons;
+    [SerializeField] private GameObject backButton;
+    [SerializeField] private GameObject sourceVertexText;
     private bool weighted = true;
     public bool Weighted
     {
@@ -63,10 +67,14 @@ public class DirectedGraphController : MonoBehaviour
         }
     }
 
+    private string currentAlgorithm;
+    private readonly string[] algsNeedingStart = { "BFS", "DFS", "BellmanFord", "Dijkstra", "DFSSSSP" };
+
     // Start is called before the first frame update
     void Start()
     {
-        
+        algsMenu.SetActive(false);
+        sourceVertexText.SetActive(false);
     }
 
     // Update is called once per frame
@@ -80,9 +88,17 @@ public class DirectedGraphController : MonoBehaviour
         {
 
         }
+        else if (selectingPhase)
+        {
+            SelectVertex();
+        }
         else
         {
-            NotRunningAlgorithms();
+            if (!algsMenu.activeSelf)
+            {
+                NotRunningAlgorithms();
+            }
+            
         }
         prevMousePosition = MousePosition;
     }
@@ -137,6 +153,21 @@ public class DirectedGraphController : MonoBehaviour
     public void Unfreeze()
     {
         frozen = false;
+    }
+
+    public void SelectVertex()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            foreach (GraphVertex vertex in vertices)
+            {
+                if (vertex.MouseTouching)
+                {
+                    RunAlgorithm(currentAlgorithm, vertex);
+                    return;
+                }
+            }
+        }
     }
 
     public void NotRunningAlgorithms()
@@ -230,11 +261,23 @@ public class DirectedGraphController : MonoBehaviour
 
     public void Back()
     {
+        if (selectingPhase)
+        {
+            algsMenu.SetActive(true);
+            currentAlgorithm = null;
+            selectingPhase = false;
+            sourceVertexText.SetActive(false);
+            return;
+        }
         if (algsMenu.activeSelf)
         {
-
+            algsMenu.SetActive(false);
+            createGraphUI.SetActive(true);
         }
-        UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
+        else
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
+        }
     }
 
     public void ToggleWeighted()
@@ -261,6 +304,73 @@ public class DirectedGraphController : MonoBehaviour
 
     public void OpenAlgMenu()
     {
+        algsMenu.SetActive(true);
+        createGraphUI.SetActive(false);
 
+        foreach (GameObject button in algButtons)
+        {
+            if (button.tag == "WeightedButton")
+            {
+                button.GetComponent<UnityEngine.UI.Button>().interactable = weighted;
+            }
+        }
+    }
+
+    public void SelectAlgorithm(string s)
+    {
+        currentAlgorithm = s;
+        algsMenu.SetActive(false);
+        bool requiresStart = false;
+        foreach (string alg in algsNeedingStart)
+        {
+            if (currentAlgorithm == alg)
+            {
+                requiresStart = true;
+                break;
+            }
+        }
+        if (requiresStart)
+        {
+            selectingPhase = true;
+            sourceVertexText.SetActive(true);
+        }
+        else
+        {
+            RunAlgorithm(currentAlgorithm, null);
+        }
+    }
+
+    public void RunAlgorithm(string s, GraphVertex start)
+    {
+        runningAlgorithm = true;
+        selectingPhase = false;
+        backButton.SetActive(false);
+        sourceVertexText.SetActive(false);
+
+        foreach (GraphVertex v in vertices)
+        {
+            v.CreateInfoText();
+        }
+        foreach (Edge e in edges)
+        {
+            e.CreateInfoText();
+        }
+
+        InitializeAlgorithm();
+    }
+
+    public void InitializeAlgorithm()
+    {
+        switch (currentAlgorithm)
+        {
+            case "BFS":
+                foreach (GraphVertex v in vertices)
+                {
+                    v.AddVariable("disc.", false);
+                    v.AddVariable("dist", 0);
+                    v.AddVariable("pred.", null);
+                }
+                break;
+        }
     }
 }
