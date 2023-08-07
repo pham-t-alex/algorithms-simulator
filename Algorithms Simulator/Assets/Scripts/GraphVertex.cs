@@ -6,7 +6,15 @@ using TMPro;
 public class GraphVertex : MonoBehaviour
 {
     private string vertexName = "?";
-    private Dictionary<string, object> variables;
+    public string VertexName
+    {
+        get
+        {
+            return vertexName;
+        }
+    }
+    private Dictionary<string, object> variables = new Dictionary<string, object>();
+    private HashSet<string> updatedVariables = new HashSet<string>();
     private VertexText nameInput;
     [SerializeField] private bool mouseTouching;
     public bool MouseTouching
@@ -17,7 +25,21 @@ public class GraphVertex : MonoBehaviour
         }
     }
     private List<Edge> incomingEdges = new List<Edge>();
+    public List<Edge> IncomingEdges
+    {
+        get
+        {
+            return incomingEdges;
+        }
+    }
     private List<Edge> outgoingEdges = new List<Edge>();
+    public List<Edge> OutgoingEdges
+    {
+        get
+        {
+            return outgoingEdges;
+        }
+    }
 
     private GameObject vertexInfoText;
     // Start is called before the first frame update
@@ -109,10 +131,64 @@ public class GraphVertex : MonoBehaviour
     public void SetVariable(string varName, object value)
     {
         variables[varName] = value;
+        MarkVarUpdated(varName);
     }
 
-    public object getVariable(string varName)
+    public object GetVariable(string varName)
     {
         return variables[varName];
+    }
+
+    public void UpdateInfoText()
+    {
+        string s = vertexName;
+        foreach (KeyValuePair<string, object> var in variables)
+        {
+            s += $"\n{var.Key} = ";
+            if (updatedVariables.Contains(var.Key))
+            {
+                s += "<color=#6a00ffff>";
+            }
+            if (var.Value == null)
+            {
+                s += "<i>null</i>";
+            }
+            else if (var.Value is bool)
+            {
+                if ((bool) var.Value == true)
+                {
+                    s += "<color=green>T</color>";
+                }
+                else
+                {
+                    s += "<color=red>F</color>";
+                }
+            }
+            else if (var.Value is GraphVertex)
+            {
+                s += "<i>" + ((GraphVertex) var.Value).vertexName + "</i>";
+            }
+            else
+            {
+                s += var.Value.ToString();
+            }
+            if (updatedVariables.Contains(var.Key))
+            {
+                s += "</color>";
+            }
+        }
+        vertexInfoText.GetComponent<TMP_Text>().text = s;
+        updatedVariables.Clear();
+    }
+
+    public void MarkVarUpdated(string var)
+    {
+        updatedVariables.Add(var);
+    }
+
+    public void SortOutgoingEdges()
+    {
+        OutgoingEdgeComparer comparer = new OutgoingEdgeComparer();
+        outgoingEdges.Sort(comparer);
     }
 }

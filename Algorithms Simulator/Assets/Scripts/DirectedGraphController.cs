@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using TMPro;
+using UnityEngine.UI;
 
 public class DirectedGraphController : MonoBehaviour
 {
@@ -42,12 +44,20 @@ public class DirectedGraphController : MonoBehaviour
     private float selectedTime = float.MinValue;
     private Vector3 prevMousePosition;
 
+    private GraphVertex sourceVertex;
+
     [SerializeField] private GameObject weightedCheckmark;
     [SerializeField] private GameObject createGraphUI;
     [SerializeField] private GameObject algsMenu;
     [SerializeField] private List<GameObject> algButtons;
     [SerializeField] private GameObject backButton;
     [SerializeField] private GameObject sourceVertexText;
+    [SerializeField] private GameObject runtimeUI;
+    [SerializeField] private GameObject algLog;
+    [SerializeField] private GameObject animSpeed;
+    [SerializeField] private GameObject vertexSelected;
+    [SerializeField] private GameObject dfsKey;
+
     private bool weighted = true;
     public bool Weighted
     {
@@ -69,12 +79,16 @@ public class DirectedGraphController : MonoBehaviour
 
     private string currentAlgorithm;
     private readonly string[] algsNeedingStart = { "BFS", "DFS", "BellmanFord", "Dijkstra", "DFSSSSP" };
+    private float animationSpeed = 1;
 
     // Start is called before the first frame update
     void Start()
     {
+        NoVertexSelected();
         algsMenu.SetActive(false);
         sourceVertexText.SetActive(false);
+        runtimeUI.SetActive(false);
+        dfsKey.SetActive(false);
     }
 
     // Update is called once per frame
@@ -163,7 +177,8 @@ public class DirectedGraphController : MonoBehaviour
             {
                 if (vertex.MouseTouching)
                 {
-                    RunAlgorithm(currentAlgorithm, vertex);
+                    sourceVertex = vertex;
+                    RunAlgorithm();
                     return;
                 }
             }
@@ -318,6 +333,7 @@ public class DirectedGraphController : MonoBehaviour
 
     public void SelectAlgorithm(string s)
     {
+        sourceVertex = null;
         currentAlgorithm = s;
         algsMenu.SetActive(false);
         bool requiresStart = false;
@@ -336,27 +352,58 @@ public class DirectedGraphController : MonoBehaviour
         }
         else
         {
-            RunAlgorithm(currentAlgorithm, null);
+            RunAlgorithm();
         }
     }
 
-    public void RunAlgorithm(string s, GraphVertex start)
+    public void RunAlgorithm()
     {
         runningAlgorithm = true;
         selectingPhase = false;
         backButton.SetActive(false);
         sourceVertexText.SetActive(false);
 
+        animationSpeed = 1;
+        animSpeed.GetComponent<Slider>().value = 1;
+
+        runtimeUI.SetActive(true);
+        SetLogText("");
+
+        vertices.Sort(new VertexComparer());
         foreach (GraphVertex v in vertices)
         {
             v.CreateInfoText();
+            v.SortOutgoingEdges();
+            v.SetColor(Color.white);
         }
         foreach (Edge e in edges)
         {
             e.CreateInfoText();
+            e.SetColor(Color.white);
         }
 
         InitializeAlgorithm();
+
+        foreach (GraphVertex v in vertices)
+        {
+            v.UpdateInfoText();
+        }
+
+        switch (currentAlgorithm)
+        {
+            case "BFS":
+                StartCoroutine(BFS());
+                break;
+            case "DFS":
+                StartCoroutine(DFS());
+                break;
+            case "Kahn":
+                StartCoroutine(Kahn());
+                break;
+            case "DFSTopSort":
+                StartCoroutine(DFSTopSort());
+                break;
+        }
     }
 
     public void InitializeAlgorithm()
@@ -367,10 +414,428 @@ public class DirectedGraphController : MonoBehaviour
                 foreach (GraphVertex v in vertices)
                 {
                     v.AddVariable("disc.", false);
-                    v.AddVariable("dist", 0);
-                    v.AddVariable("pred.", null);
+                    v.AddVariable("d", float.PositiveInfinity);
+                    v.AddVariable("pi", null);
+                }
+                sourceVertex.SetVariable("disc.", true);
+                sourceVertex.SetVariable("d", 0);
+                sourceVertex.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                break;
+            case "DFS":
+                foreach (GraphVertex v in vertices)
+                {
+                    v.AddVariable("disc.", -1);
+                    v.AddVariable("fin.", -1);
+                    v.AddVariable("pi", null);
+                }
+                break;
+            case "Kahn":
+                foreach (GraphVertex v in vertices)
+                {
+                    v.AddVariable("in.", v.IncomingEdges.Count);
+                }
+                break;
+            case "DFSTopSort":
+                foreach (GraphVertex v in vertices)
+                {
+                    v.AddVariable("disc.", -1);
+                    v.AddVariable("fin.", -1);
                 }
                 break;
         }
+    }
+
+    public void ChangeAnimationSpeed(float f)
+    {
+        animationSpeed = f;
+    }
+
+    public void SetLogText(string s)
+    {
+        algLog.GetComponent<TMP_Text>().text = s;
+    }
+
+    public void AddToLogText(string s)
+    {
+        algLog.GetComponent<TMP_Text>().text += s;
+    }
+
+    public IEnumerator BFS()
+    {
+        List<GraphVertex> newAddedElements = new List<GraphVertex>();
+        List<GraphVertex> vertexQueue = new List<GraphVertex>();
+        List<GraphVertex> previousVertices = new List<GraphVertex>();
+        newAddedElements.Add(sourceVertex);
+        vertexQueue.Add(sourceVertex);
+        SetLogText(VertexListToString(vertexQueue, newAddedElements, "Queue"));
+        newAddedElements.Clear();
+        yield return new WaitForSeconds(3 / animationSpeed);
+        while (vertexQueue.Count > 0)
+        {
+            GraphVertex currVertex = vertexQueue[0];
+            SetVertexSelected(currVertex);
+            vertexQueue.RemoveAt(0);
+            SetLogText(VertexListToString(vertexQueue, null, "Queue"));
+            yield return new WaitForSeconds(2 / animationSpeed);
+            foreach (Edge e in currVertex.OutgoingEdges)
+            {
+                e.SetColor(new Color(0.6f, 0.6f, 0.6f));
+                GraphVertex destination = e.Destination;
+                if (!((bool) destination.GetVariable("disc.")))
+                {
+                    destination.SetVariable("disc.", true);
+                    destination.SetVariable("d", ((int) currVertex.GetVariable("d")) + 1);
+                    destination.SetVariable("pi", currVertex);
+                    destination.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                    destination.UpdateInfoText();
+                    previousVertices.Add(destination);
+                    vertexQueue.Add(destination);
+                    newAddedElements.Add(destination);
+                    SetLogText(VertexListToString(vertexQueue, newAddedElements, "Queue"));
+                    yield return new WaitForSeconds(1 / animationSpeed);
+                }
+            }
+            newAddedElements.Clear();
+            previousVertices.Clear();
+            currVertex.SetColor(new Color(0.6f, 0.6f, 0.6f));
+            NoVertexSelected();
+            SetLogText(VertexListToString(vertexQueue, null, "Queue"));
+            yield return new WaitForSeconds(3 / animationSpeed);
+
+            foreach (GraphVertex vertex in previousVertices)
+            {
+                vertex.UpdateInfoText();
+            }
+        }
+        SetLogText(VertexListToString(vertexQueue, null, "Queue"));
+        yield return null;
+    }
+
+    public string VertexListToString(List<GraphVertex> list, List<GraphVertex> newAddedElements, string listName)
+    {
+        string s = $"{listName}: ";
+        if (list.Count > 0)
+        {
+            if (newAddedElements != null && newAddedElements.Contains(list[0]))
+            {
+                s += "<color=#e3d1ffff>" + list[0].VertexName + "</color>";
+            }
+            else
+            {
+                s += list[0].VertexName;
+            }
+            for (int i = 1; i < list.Count; i++)
+            {
+                if (newAddedElements != null && newAddedElements.Contains(list[i]))
+                {
+                    s += ", <color=#e3d1ffff>" + list[i].VertexName + "</color>";
+                }
+                else
+                {
+                    s += ", " + list[i].VertexName;
+                }
+            }
+        }
+        else
+        {
+            s += "[empty]";
+        }
+        return s;
+    }
+
+    public IEnumerator DFS()
+    {
+        dfsKey.SetActive(true);
+        SetLogText("Parentheses:");
+        int time = 1;
+        Stack<object> stack = new Stack<object>();
+        stack.Push(sourceVertex);
+        GraphVertex previousVertex = null;
+        yield return new WaitForSeconds(3 / animationSpeed);
+        while (stack.Count > 0)
+        {
+            object obj = stack.Pop();
+            if (obj is GraphVertex)
+            {
+                GraphVertex v = (GraphVertex) obj;
+                if ((int) v.GetVariable("disc.") < 0)
+                {
+                    SetVertexSelected(v);
+                    v.SetVariable("disc.", time);
+                    time++;
+                    AddToLogText($" <size=10>{v.VertexName}</size>(");
+                    v.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                    v.UpdateInfoText();
+                    if (previousVertex != null)
+                    {
+                        previousVertex.UpdateInfoText();
+                    }
+                    previousVertex = v;
+                    yield return new WaitForSeconds(2 / animationSpeed);
+                    stack.Push(v);
+                    for (int i = v.OutgoingEdges.Count - 1; i >= 0; i--)
+                    {
+                        stack.Push(v.OutgoingEdges[i]);
+                    }
+                }
+                else if ((int) v.GetVariable("fin.") < 0)
+                {
+                    SetVertexSelected(v);
+                    v.SetVariable("fin.", time);
+                    time++;
+                    AddToLogText($" )<size=10>{v.VertexName}</size>");
+                    v.SetColor(new Color(0.6f, 0.6f, 0.6f));
+                    v.UpdateInfoText();
+                    if (previousVertex != null && previousVertex != v)
+                    {
+                        previousVertex.UpdateInfoText();
+                    }
+                    previousVertex = v;
+                    yield return new WaitForSeconds(2 / animationSpeed);
+                }
+            }
+            else
+            {
+                Edge e = (Edge) obj;
+                GraphVertex v = e.Destination;
+
+                if ((int) v.GetVariable("disc.") < 0)
+                {
+                    v.SetVariable("pi", e.Source);
+                    stack.Push(v);
+                    e.SetColor(new Color(0.6f, 0.6f, 0.6f));
+                }
+                else if ((int) v.GetVariable("fin.") < 0)
+                {
+                    e.SetColor(new Color(0.8f, 0.35f, 0));
+                }
+                else if ((int) v.GetVariable("disc.") > (int) e.Source.GetVariable("disc."))
+                {
+                    e.SetColor(new Color(0, 0.75f, 0.8f));
+                }
+                else
+                {
+                    e.SetColor(new Color(0, 0.8f, 0.4f));
+                }
+            }
+        }
+        NoVertexSelected();
+        if (previousVertex != null)
+        {
+            previousVertex.UpdateInfoText();
+        }
+        yield return null;
+    }
+
+    public IEnumerator Kahn()
+    {
+        List<GraphVertex> topSorted = new List<GraphVertex>();
+        List<GraphVertex> newAdditions = new List<GraphVertex>();
+        List<GraphVertex> previousVertices = new List<GraphVertex>();
+        foreach (GraphVertex v in vertices)
+        {
+            if ((int) v.GetVariable("in.") == 0)
+            {
+                topSorted.Add(v);
+                newAdditions.Add(v);
+            }
+        }
+        SetLogText(VertexListToString(topSorted, newAdditions, "List"));
+        newAdditions.Clear();
+        yield return new WaitForSeconds(3 / animationSpeed);
+        int index = 0;
+        while (index < topSorted.Count)
+        {
+            GraphVertex v = topSorted[index];
+            SetVertexSelected(v);
+            foreach (Edge e in v.OutgoingEdges)
+            {
+                GraphVertex destination = e.Destination;
+                destination.SetVariable("in.", (int) destination.GetVariable("in.") - 1);
+                destination.UpdateInfoText();
+                if ((int) destination.GetVariable("in.") == 0)
+                {
+                    topSorted.Add(destination);
+                    newAdditions.Add(destination);
+                    previousVertices.Add(destination);
+                    SetLogText(VertexListToString(topSorted, newAdditions, "List"));
+                }
+                yield return new WaitForSeconds(1 / animationSpeed);
+            }
+            newAdditions.Clear();
+            NoVertexSelected();
+            SetLogText(VertexListToString(topSorted, null, "List"));
+            index++;
+            yield return new WaitForSeconds(3 / animationSpeed);
+
+            foreach (GraphVertex vertex in previousVertices)
+            {
+                vertex.UpdateInfoText();
+            }
+        }
+        yield return null;
+    }
+
+    public IEnumerator DFSTopSort()
+    {
+        int time = 1;
+        Stack<GraphVertex> stack = new Stack<GraphVertex>();
+        List<GraphVertex> topSort = new List<GraphVertex>();
+        List<GraphVertex> newAddition = new List<GraphVertex>();
+        GraphVertex previousVertex = null;
+        SetLogText(VertexListToString(topSort, null, "List"));
+        yield return new WaitForSeconds(3 / animationSpeed);
+        foreach (GraphVertex vertex in vertices)
+        {
+            stack.Push(vertex);
+
+            while (stack.Count > 0)
+            {
+                GraphVertex v = stack.Pop();
+                if ((int) v.GetVariable("disc.") < 0)
+                {
+                    SetVertexSelected(v);
+                    v.SetVariable("disc.", time);
+                    time++;
+                    v.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                    v.UpdateInfoText();
+                    if (previousVertex != null)
+                    {
+                        previousVertex.UpdateInfoText();
+                    }
+                    previousVertex = v;
+                    yield return new WaitForSeconds(2 / animationSpeed);
+                    stack.Push(v);
+                    for (int i = v.OutgoingEdges.Count - 1; i >= 0; i--)
+                    {
+                        GraphVertex destination = v.OutgoingEdges[i].Destination;
+                        if ((int) destination.GetVariable("disc.") < 0)
+                        {
+                            stack.Push(destination);
+                        }
+                    }
+                }
+                else if ((int)v.GetVariable("fin.") < 0)
+                {
+                    SetVertexSelected(v);
+                    v.SetVariable("fin.", time);
+                    topSort.Insert(0, v);
+                    newAddition.Add(v);
+                    SetLogText(VertexListToString(topSort, newAddition, "List"));
+                    newAddition.Clear();
+                    time++;
+                    v.SetColor(new Color(0.6f, 0.6f, 0.6f));
+                    v.UpdateInfoText();
+                    if (previousVertex != null && previousVertex != v)
+                    {
+                        previousVertex.UpdateInfoText();
+                    }
+                    previousVertex = v;
+                    yield return new WaitForSeconds(2 / animationSpeed);
+                }
+            }
+            SetLogText(VertexListToString(topSort, null, "List"));
+            NoVertexSelected();
+            if (previousVertex != null)
+            {
+                previousVertex.UpdateInfoText();
+            }
+            previousVertex = null;
+            yield return new WaitForSeconds(1 / animationSpeed);
+        }
+        /*
+        dfsKey.SetActive(true);
+        SetLogText("Parentheses:");
+        int time = 1;
+        Stack<object> stack = new Stack<object>();
+        stack.Push(sourceVertex);
+        GraphVertex previousVertex = null;
+        yield return new WaitForSeconds(3 / animationSpeed);
+        while (stack.Count > 0)
+        {
+            object obj = stack.Pop();
+            if (obj is GraphVertex)
+            {
+                GraphVertex v = (GraphVertex) obj;
+                if ((int) v.GetVariable("disc.") < 0)
+                {
+                    SetVertexSelected(v);
+                    v.SetVariable("disc.", time);
+                    time++;
+                    AddToLogText($" <size=10>{v.VertexName}</size>(");
+                    v.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                    v.UpdateInfoText();
+                    if (previousVertex != null)
+                    {
+                        previousVertex.UpdateInfoText();
+                    }
+                    previousVertex = v;
+                    yield return new WaitForSeconds(2 / animationSpeed);
+                    stack.Push(v);
+                    for (int i = v.OutgoingEdges.Count - 1; i >= 0; i--)
+                    {
+                        stack.Push(v.OutgoingEdges[i]);
+                    }
+                }
+                else if ((int) v.GetVariable("fin.") < 0)
+                {
+                    SetVertexSelected(v);
+                    v.SetVariable("fin.", time);
+                    time++;
+                    AddToLogText($" )<size=10>{v.VertexName}</size>");
+                    v.SetColor(new Color(0.6f, 0.6f, 0.6f));
+                    v.UpdateInfoText();
+                    if (previousVertex != null && previousVertex != v)
+                    {
+                        previousVertex.UpdateInfoText();
+                    }
+                    previousVertex = v;
+                    yield return new WaitForSeconds(2 / animationSpeed);
+                }
+            }
+            else
+            {
+                Edge e = (Edge) obj;
+                GraphVertex v = e.Destination;
+
+                if ((int) v.GetVariable("disc.") < 0)
+                {
+                    v.SetVariable("pi", e.Source);
+                    stack.Push(v);
+                    e.SetColor(new Color(0.6f, 0.6f, 0.6f));
+                }
+                else if ((int) v.GetVariable("fin.") < 0)
+                {
+                    e.SetColor(new Color(0.8f, 0.35f, 0));
+                }
+                else if ((int) v.GetVariable("disc.") > (int) e.Source.GetVariable("disc."))
+                {
+                    e.SetColor(new Color(0, 0.75f, 0.8f));
+                }
+                else
+                {
+                    e.SetColor(new Color(0, 0.8f, 0.4f));
+                }
+            }
+        }
+        NoVertexSelected();
+        if (previousVertex != null)
+        {
+            previousVertex.UpdateInfoText();
+        }
+        yield return null;
+        */
+        yield return null;
+    }
+
+    public void SetVertexSelected(GraphVertex v)
+    {
+        vertexSelected.transform.position = v.transform.position;
+        vertexSelected.GetComponent<SpriteRenderer>().enabled = true;
+    }
+
+    public void NoVertexSelected()
+    {
+        vertexSelected.GetComponent<SpriteRenderer>().enabled = false;
     }
 }
