@@ -472,7 +472,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.31882426}
   m_AnchorMax: {x: 0.39546406, y: 0.40710306}
-  m_AnchoredPosition: {x: -0.000061035156, y: -0.000049591064}
+  m_AnchoredPosition: {x: -0.000061035156, y: -0.000045776367}
   m_SizeDelta: {x: 0.000076293945, y: -0.00009918213}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &88327195
@@ -1699,7 +1699,7 @@ GameObject:
   - component: {fileID: 390063438}
   - component: {fileID: 390063437}
   m_Layer: 5
-  m_Name: DFSSSSP
+  m_Name: DAGSSSP
   m_TagString: WeightedButton
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1779,7 +1779,7 @@ MonoBehaviour:
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument: DFSSSSP
+          m_StringArgument: DAGSSSP
           m_BoolArgument: 0
         m_CallState: 2
 --- !u!114 &390063438
@@ -5770,7 +5770,7 @@ MonoBehaviour:
   m_charWidthMaxAdj: 0
   m_enableWordWrapping: 1
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 4
+  m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 1
@@ -6049,7 +6049,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.245, y: 0.12444104}
   m_AnchorMax: {x: 0.36625, y: 0.30666664}
-  m_AnchoredPosition: {x: 0.19000244, y: 0.5}
+  m_AnchoredPosition: {x: 0.19000244, y: 0.50076294}
   m_SizeDelta: {x: 0.05319214, y: -0.13349915}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1510650547
@@ -6438,7 +6438,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.83279395}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0.0000076293945, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -0.000091553, y: -0.0000038147}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1617641666
@@ -7904,7 +7904,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: DFS Single Source Shortest Paths
+  m_text: Directed Acyclic Graph Algorithm
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 381a79a2da2efdb41a3786e84d42b3c8, type: 2}
   m_sharedMaterial: {fileID: -5013723655748893096, guid: 381a79a2da2efdb41a3786e84d42b3c8, type: 2}
@@ -8116,7 +8116,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.42800003, y: 0.69558805}
   m_AnchorMax: {x: 0.92200005, y: 0.78389704}
-  m_AnchoredPosition: {x: 0.25989914, y: -0.00005722046}
+  m_AnchoredPosition: {x: 0.25989914, y: -0.00005340576}
   m_SizeDelta: {x: 0.5192003, y: -0.0001}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2135689532

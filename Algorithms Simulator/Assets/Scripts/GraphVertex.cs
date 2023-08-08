@@ -188,7 +188,11 @@ public class GraphVertex : MonoBehaviour
 
     public void SortOutgoingEdges()
     {
-        OutgoingEdgeComparer comparer = new OutgoingEdgeComparer();
-        outgoingEdges.Sort(comparer);
+        outgoingEdges.Sort(new EdgeComparer());
+    }
+
+    public override string ToString()
+    {
+        return vertexName;
     }
 }

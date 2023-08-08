@@ -6,6 +6,13 @@ using TMPro;
 public class Edge : MonoBehaviour
 {
     private float weight;
+    public float Weight
+    {
+        get
+        {
+            return weight;
+        }
+    }
     private bool mouseTouching;
     public bool MouseTouching
     {
@@ -31,6 +38,22 @@ public class Edge : MonoBehaviour
         get
         {
             return destination;
+        }
+    }
+
+    public string EdgeName
+    {
+        get
+        {
+            return source.VertexName + "-" + destination.VertexName;
+        }
+    }
+
+    public bool SelfEdge
+    {
+        get
+        {
+            return source == destination;
         }
     }
 
@@ -170,5 +193,10 @@ public class Edge : MonoBehaviour
     public void CreateInfoText()
     {
         weightInput.GetComponent<TMP_InputField>().interactable = false;
+    }
+
+    public override string ToString()
+    {
+        return EdgeName;
     }
 }
