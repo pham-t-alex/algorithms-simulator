@@ -57,6 +57,7 @@ public class DirectedGraphController : MonoBehaviour
     [SerializeField] private GameObject animSpeed;
     [SerializeField] private GameObject vertexSelected;
     [SerializeField] private GameObject dfsKey;
+    [SerializeField] private GameObject endButton;
 
     private bool weighted = true;
     public bool Weighted
@@ -89,6 +90,7 @@ public class DirectedGraphController : MonoBehaviour
         sourceVertexText.SetActive(false);
         runtimeUI.SetActive(false);
         dfsKey.SetActive(false);
+        endButton.SetActive(false);
     }
 
     // Update is called once per frame
@@ -282,9 +284,8 @@ public class DirectedGraphController : MonoBehaviour
             currentAlgorithm = null;
             selectingPhase = false;
             sourceVertexText.SetActive(false);
-            return;
         }
-        if (algsMenu.activeSelf)
+        else if (algsMenu.activeSelf)
         {
             algsMenu.SetActive(false);
             createGraphUI.SetActive(true);
@@ -374,7 +375,7 @@ public class DirectedGraphController : MonoBehaviour
         foreach (GraphVertex v in vertices)
         {
             v.CreateInfoText();
-            v.SortOutgoingEdges();
+            v.SortEdges();
             v.SetColor(Color.white);
         }
         foreach (Edge e in edges)
@@ -413,6 +414,9 @@ public class DirectedGraphController : MonoBehaviour
                 break;
             case "Dijkstra":
                 StartCoroutine(Dijkstra());
+                break;
+            case "DAGSSSP":
+                StartCoroutine(DAGSSSP());
                 break;
         }
     }
@@ -470,6 +474,13 @@ public class DirectedGraphController : MonoBehaviour
                 }
                 sourceVertex.SetVariable("d", 0f);
                 break;
+            case "DAGSSSP":
+                foreach (GraphVertex v in vertices)
+                {
+                    v.AddVariable("disc.", -1);
+                    v.AddVariable("fin.", -1);
+                }
+                break;
         }
     }
 
@@ -495,7 +506,7 @@ public class DirectedGraphController : MonoBehaviour
         List<GraphVertex> previousVertices = new List<GraphVertex>();
         newAddedElements.Add(sourceVertex);
         vertexQueue.Add(sourceVertex);
-        SetLogText(VertexListToString(vertexQueue, newAddedElements, "Queue"));
+        SetLogText(ListToString(vertexQueue, newAddedElements, "Queue"));
         newAddedElements.Clear();
         yield return new WaitForSeconds(3 / animationSpeed);
         while (vertexQueue.Count > 0)
@@ -503,7 +514,7 @@ public class DirectedGraphController : MonoBehaviour
             GraphVertex currVertex = vertexQueue[0];
             SetVertexSelected(currVertex);
             vertexQueue.RemoveAt(0);
-            SetLogText(VertexListToString(vertexQueue, null, "Queue"));
+            SetLogText(ListToString(vertexQueue, null, "Queue"));
             yield return new WaitForSeconds(2 / animationSpeed);
             foreach (Edge e in currVertex.OutgoingEdges)
             {
@@ -519,7 +530,7 @@ public class DirectedGraphController : MonoBehaviour
                     previousVertices.Add(destination);
                     vertexQueue.Add(destination);
                     newAddedElements.Add(destination);
-                    SetLogText(VertexListToString(vertexQueue, newAddedElements, "Queue"));
+                    SetLogText(ListToString(vertexQueue, newAddedElements, "Queue"));
                     yield return new WaitForSeconds(1 / animationSpeed);
                 }
             }
@@ -527,7 +538,7 @@ public class DirectedGraphController : MonoBehaviour
             previousVertices.Clear();
             currVertex.SetColor(new Color(0.6f, 0.6f, 0.6f));
             NoVertexSelected();
-            SetLogText(VertexListToString(vertexQueue, null, "Queue"));
+            SetLogText(ListToString(vertexQueue, null, "Queue"));
             yield return new WaitForSeconds(3 / animationSpeed);
 
             foreach (GraphVertex vertex in previousVertices)
@@ -535,32 +546,32 @@ public class DirectedGraphController : MonoBehaviour
                 vertex.UpdateInfoText();
             }
         }
-        SetLogText(VertexListToString(vertexQueue, null, "Queue"));
-        yield return null;
+        SetLogText(ListToString(vertexQueue, null, "Queue"));
+        yield return End();
     }
 
-    public string VertexListToString(List<GraphVertex> list, List<GraphVertex> newAddedElements, string listName)
+    public string ListToString<T>(List<T> list, List<T> newAddedElements, string listName)
     {
         string s = $"{listName}: ";
         if (list.Count > 0)
         {
             if (newAddedElements != null && newAddedElements.Contains(list[0]))
             {
-                s += "<color=#e3d1ffff>" + list[0].VertexName + "</color>";
+                s += "<color=#e3d1ffff>" + list[0].ToString() + "</color>";
             }
             else
             {
-                s += list[0].VertexName;
+                s += list[0].ToString();
             }
             for (int i = 1; i < list.Count; i++)
             {
                 if (newAddedElements != null && newAddedElements.Contains(list[i]))
                 {
-                    s += ", <color=#e3d1ffff>" + list[i].VertexName + "</color>";
+                    s += ", <color=#e3d1ffff>" + list[i].ToString() + "</color>";
                 }
                 else
                 {
-                    s += ", " + list[i].VertexName;
+                    s += ", " + list[i].ToString();
                 }
             }
         }
@@ -652,7 +663,7 @@ public class DirectedGraphController : MonoBehaviour
         {
             previousVertex.UpdateInfoText();
         }
-        yield return null;
+        yield return End();
     }
 
     public IEnumerator Kahn()
@@ -668,7 +679,7 @@ public class DirectedGraphController : MonoBehaviour
                 newAdditions.Add(v);
             }
         }
-        SetLogText(VertexListToString(topSorted, newAdditions, "List"));
+        SetLogText(ListToString(topSorted, newAdditions, "List"));
         newAdditions.Clear();
         yield return new WaitForSeconds(3 / animationSpeed);
         int index = 0;
@@ -686,13 +697,13 @@ public class DirectedGraphController : MonoBehaviour
                     topSorted.Add(destination);
                     newAdditions.Add(destination);
                     previousVertices.Add(destination);
-                    SetLogText(VertexListToString(topSorted, newAdditions, "List"));
+                    SetLogText(ListToString(topSorted, newAdditions, "List"));
                 }
                 yield return new WaitForSeconds(1 / animationSpeed);
             }
             newAdditions.Clear();
             NoVertexSelected();
-            SetLogText(VertexListToString(topSorted, null, "List"));
+            SetLogText(ListToString(topSorted, null, "List"));
             index++;
             yield return new WaitForSeconds(3 / animationSpeed);
 
@@ -701,7 +712,7 @@ public class DirectedGraphController : MonoBehaviour
                 vertex.UpdateInfoText();
             }
         }
-        yield return null;
+        yield return End();
     }
 
     public IEnumerator DFSTopSort()
@@ -711,7 +722,7 @@ public class DirectedGraphController : MonoBehaviour
         List<GraphVertex> topSort = new List<GraphVertex>();
         List<GraphVertex> newAddition = new List<GraphVertex>();
         GraphVertex previousVertex = null;
-        SetLogText(VertexListToString(topSort, null, "List"));
+        SetLogText(ListToString(topSort, null, "List"));
         yield return new WaitForSeconds(3 / animationSpeed);
         foreach (GraphVertex vertex in vertices)
         {
@@ -749,7 +760,7 @@ public class DirectedGraphController : MonoBehaviour
                     v.SetVariable("fin.", time);
                     topSort.Insert(0, v);
                     newAddition.Add(v);
-                    SetLogText(VertexListToString(topSort, newAddition, "List"));
+                    SetLogText(ListToString(topSort, newAddition, "List"));
                     newAddition.Clear();
                     time++;
                     v.SetColor(new Color(0.6f, 0.6f, 0.6f));
@@ -762,7 +773,7 @@ public class DirectedGraphController : MonoBehaviour
                     yield return new WaitForSeconds(2 / animationSpeed);
                 }
             }
-            SetLogText(VertexListToString(topSort, null, "List"));
+            SetLogText(ListToString(topSort, null, "List"));
             NoVertexSelected();
             if (previousVertex != null)
             {
@@ -772,7 +783,7 @@ public class DirectedGraphController : MonoBehaviour
             yield return new WaitForSeconds(1 / animationSpeed);
         }
 
-        yield return null;
+        yield return End();
     }
 
     public IEnumerator Kosaraju()
@@ -828,7 +839,7 @@ public class DirectedGraphController : MonoBehaviour
         {
             stack.Push(vertex);
             currentVertex.Add(vertex);
-            SetLogText(VertexListToString(topSort, currentVertex, "L"));
+            SetLogText(ListToString(topSort, currentVertex, "L"));
             AddToLogText(" | Comps: " + components);
 
             while (stack.Count > 0)
@@ -911,10 +922,10 @@ public class DirectedGraphController : MonoBehaviour
             currentVertex.Clear();
         }
 
-        SetLogText(VertexListToString(topSort, null, "L"));
+        SetLogText(ListToString(topSort, null, "L"));
         AddToLogText(" | Comps: " + components);
         UnreverseEdges();
-        yield return null;
+        yield return End();
     }
 
     public IEnumerator DFSTopSortSubroutine(List<GraphVertex> topSort)
@@ -923,7 +934,7 @@ public class DirectedGraphController : MonoBehaviour
         Stack<GraphVertex> stack = new Stack<GraphVertex>();
         List<GraphVertex> newAddition = new List<GraphVertex>();
         GraphVertex previousVertex = null;
-        SetLogText(VertexListToString(topSort, null, "List"));
+        SetLogText(ListToString(topSort, null, "List"));
         yield return new WaitForSeconds(3 / animationSpeed);
         foreach (GraphVertex vertex in vertices)
         {
@@ -961,7 +972,7 @@ public class DirectedGraphController : MonoBehaviour
                     v.SetVariable("fin.", time);
                     topSort.Insert(0, v);
                     newAddition.Add(v);
-                    SetLogText(VertexListToString(topSort, newAddition, "List"));
+                    SetLogText(ListToString(topSort, newAddition, "List"));
                     newAddition.Clear();
                     time++;
                     v.SetColor(new Color(0.6f, 0.6f, 0.6f));
@@ -974,7 +985,7 @@ public class DirectedGraphController : MonoBehaviour
                     yield return new WaitForSeconds(2 / animationSpeed);
                 }
             }
-            SetLogText(VertexListToString(topSort, null, "List"));
+            SetLogText(ListToString(topSort, null, "List"));
             NoVertexSelected();
             if (previousVertex != null)
             {
@@ -990,14 +1001,14 @@ public class DirectedGraphController : MonoBehaviour
         GraphVertex previousVertex = null;
         Edge previousEdge = null;
         List<Edge> currentEdge = new List<Edge>();
-        SetLogText("0/" + (vertices.Count - 1) + " | " + EdgeListToString(edges, null, "Edges"));
+        SetLogText("0/" + (vertices.Count - 1) + " | " + ListToString(edges, null, "Edges"));
         yield return new WaitForSeconds(3 / animationSpeed);
         for (int i = 1; i < vertices.Count; i++)
         {
             foreach (Edge e in edges)
             {
                 currentEdge.Add(e);
-                SetLogText(i + "/" + (vertices.Count - 1) + " | " + EdgeListToString(edges, currentEdge, "Edges"));
+                SetLogText(i + "/" + (vertices.Count - 1) + " | " + ListToString(edges, currentEdge, "Edges"));
                 e.SetColor(new Color(0.4f, 0, 1));
                 if (previousEdge != null)
                 {
@@ -1013,7 +1024,7 @@ public class DirectedGraphController : MonoBehaviour
                 yield return new WaitForSeconds(2 / animationSpeed);
                 currentEdge.Clear();
             }
-            SetLogText(i + "/" + (vertices.Count - 1) + " | " + EdgeListToString(edges, null, "Edges"));
+            SetLogText(i + "/" + (vertices.Count - 1) + " | " + ListToString(edges, null, "Edges"));
             if (previousEdge != null)
             {
                 previousEdge.SetColor(Color.white);
@@ -1024,12 +1035,210 @@ public class DirectedGraphController : MonoBehaviour
             }
             yield return new WaitForSeconds(2 / animationSpeed);
         }
-        yield return null;
+        yield return End();
     }
 
     public IEnumerator Dijkstra()
     {
-        yield return null;
+        PriorityQueue<GraphVertex> priorityQueue = new PriorityQueue<GraphVertex>();
+        List<GraphVertex> highlights = new List<GraphVertex>();
+        GraphVertex previousVertex = null;
+        Edge previousEdge = null;
+        foreach (GraphVertex v in vertices)
+        {
+            priorityQueue.AddElement((float) v.GetVariable("d"), v);
+        }
+        SetLogText(PriorityQueueToString(priorityQueue, null, "P.Queue"));
+        yield return new WaitForSeconds(3 / animationSpeed);
+
+        while (priorityQueue.Count > 0)
+        {
+            GraphVertex v = priorityQueue.Remove();
+            SetVertexSelected(v);
+            SetLogText(PriorityQueueToString(priorityQueue, null, "P.Queue"));
+            yield return new WaitForSeconds(1 / animationSpeed);
+            foreach (Edge e in v.OutgoingEdges)
+            {
+                RelaxEdge(e);
+                e.SetColor(new Color(0.4f, 0, 1));
+                if (previousEdge != null)
+                {
+                    previousEdge.SetColor(Color.white);
+                }
+                previousEdge = e;
+                GraphVertex destination = e.Destination;
+                if (previousVertex != null)
+                {
+                    previousVertex.UpdateInfoText();
+                }
+                previousVertex = destination;
+                bool change = priorityQueue.DecreaseKey((float)destination.GetVariable("d"), destination);
+                if (change)
+                {
+                    highlights.Add(destination);
+                }
+                SetLogText(PriorityQueueToString(priorityQueue, highlights, "P.Queue"));
+                highlights.Clear();
+                yield return new WaitForSeconds(2 / animationSpeed);
+            }
+            NoVertexSelected();
+            SetLogText(PriorityQueueToString(priorityQueue, null, "P.Queue"));
+            if (previousEdge != null)
+            {
+                previousEdge.SetColor(Color.white);
+            }
+            previousEdge = null;
+            if (previousVertex != null)
+            {
+                previousVertex.UpdateInfoText();
+            }
+            previousVertex = null;
+            yield return new WaitForSeconds(1 / animationSpeed);
+        }
+
+        yield return End();
+    }
+
+    public string PriorityQueueToString<T>(PriorityQueue<T> priorityQueue, List<T> highlights, string queueName)
+    {
+        string s = $"{queueName}: ";
+        if (priorityQueue.Count > 0)
+        {
+            List<T> elements = priorityQueue.Elements();
+            List<float> keys = priorityQueue.Keys();
+            string keyAsString = keys[0].ToString();
+            if (float.IsPositiveInfinity(keys[0]))
+            {
+                keyAsString = "Inf.";
+            }
+            if (highlights != null && highlights.Contains(elements[0]))
+            {
+                s += "<color=#e3d1ffff>" + elements[0].ToString() + "<size=10>" + keyAsString + "</size></color>";
+            }
+            else
+            {
+                s += elements[0].ToString() + "<size=10>" + keyAsString + "</size>";
+            }
+            for (int i = 1; i < priorityQueue.Count; i++)
+            {
+                keyAsString = keys[i].ToString();
+                if (float.IsPositiveInfinity(keys[i]))
+                {
+                    keyAsString = "Inf.";
+                }
+                if (highlights != null && highlights.Contains(elements[i]))
+                {
+                    s += ", <color=#e3d1ffff>" + elements[i].ToString() + "<size=10>" + keyAsString + "</size></color>";
+                }
+                else
+                {
+                    s += ", " + elements[i].ToString() + "<size=10>" + keyAsString + "</size>";
+                }
+            }
+        }
+        else
+        {
+            s += "[empty]";
+        }
+        return s;
+    }
+    
+    public IEnumerator DAGSSSP()
+    {
+        List<GraphVertex> topSort = new List<GraphVertex>();
+        yield return DFSTopSortSubroutine(topSort);
+
+        yield return new WaitForSeconds(1 / animationSpeed);
+
+        foreach (GraphVertex v in vertices)
+        {
+            v.RemoveVariable("disc.");
+            v.RemoveVariable("fin.");
+            v.AddVariable("d", float.PositiveInfinity);
+            v.AddVariable("pi", null);
+            v.SetColor(Color.white);
+            v.UpdateInfoText();
+        }
+        sourceVertex.SetVariable("d", 0f);
+        sourceVertex.UpdateInfoText();
+        SetLogText(ListToString(topSort, null, "L"));
+
+        yield return new WaitForSeconds(1 / animationSpeed);
+
+        List<GraphVertex> highlights = new List<GraphVertex>();
+        GraphVertex previousVertex = null;
+        Edge previousEdge = null;
+
+        foreach (GraphVertex v in topSort)
+        {
+            SetVertexSelected(v);
+            highlights.Add(v);
+            SetLogText(ListToString(topSort, highlights, "L"));
+            highlights.Clear();
+            yield return new WaitForSeconds(1 / animationSpeed);
+            foreach (Edge e in v.OutgoingEdges)
+            {
+                RelaxEdge(e);
+                e.SetColor(new Color(0.4f, 0, 1));
+                if (previousEdge != null)
+                {
+                    previousEdge.SetColor(Color.white);
+                }
+                previousEdge = e;
+                GraphVertex destination = e.Destination;
+                if (previousVertex != null)
+                {
+                    previousVertex.UpdateInfoText();
+                }
+                previousVertex = destination;
+                yield return new WaitForSeconds(2 / animationSpeed);
+            }
+            NoVertexSelected();
+            SetLogText(ListToString(topSort, null, "L"));
+            if (previousEdge != null)
+            {
+                previousEdge.SetColor(Color.white);
+            }
+            previousEdge = null;
+            if (previousVertex != null)
+            {
+                previousVertex.UpdateInfoText();
+            }
+            previousVertex = null;
+            yield return new WaitForSeconds(1 / animationSpeed);
+        }
+
+        yield return End();
+    }
+
+    public IEnumerator End()
+    {
+        yield return new WaitForSeconds(3 / animationSpeed);
+        endButton.SetActive(true);
+    }
+
+    public void EndAlgorithm()
+    {
+        endButton.SetActive(false);
+        runningAlgorithm = false;
+        runtimeUI.SetActive(false);
+        SetLogText("");
+
+        foreach (GraphVertex v in vertices)
+        {
+            v.ClearVariables();
+            v.DestroyInfoText();
+            v.SetColor(Color.white);
+        }
+        foreach (Edge e in edges)
+        {
+            e.DestroyInfoText();
+            e.SetColor(Color.white);
+        }
+        backButton.SetActive(true);
+        currentAlgorithm = null;
+        createGraphUI.SetActive(true);
+        sourceVertex = null;
     }
 
     public void RelaxEdge(Edge e)
@@ -1042,38 +1251,6 @@ public class DirectedGraphController : MonoBehaviour
             destination.SetVariable("pi", source);
             destination.UpdateInfoText();
         }
-    }
-
-    public string EdgeListToString(List<Edge> list, List<Edge> newAddedElements, string listName)
-    {
-        string s = $"{listName}: ";
-        if (list.Count > 0)
-        {
-            if (newAddedElements != null && newAddedElements.Contains(list[0]))
-            {
-                s += "<color=#e3d1ffff>" + list[0].EdgeName + "</color>";
-            }
-            else
-            {
-                s += list[0].EdgeName;
-            }
-            for (int i = 1; i < list.Count; i++)
-            {
-                if (newAddedElements != null && newAddedElements.Contains(list[i]))
-                {
-                    s += ", <color=#e3d1ffff>" + list[i].EdgeName + "</color>";
-                }
-                else
-                {
-                    s += ", " + list[i].EdgeName;
-                }
-            }
-        }
-        else
-        {
-            s += "[empty]";
-        }
-        return s;
     }
 
     public void SetVertexSelected(GraphVertex v)

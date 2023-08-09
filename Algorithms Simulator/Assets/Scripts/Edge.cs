@@ -195,6 +195,11 @@ public class Edge : MonoBehaviour
         weightInput.GetComponent<TMP_InputField>().interactable = false;
     }
 
+    public void DestroyInfoText()
+    {
+        weightInput.GetComponent<TMP_InputField>().interactable = true;
+    }
+
     public override string ToString()
     {
         return EdgeName;

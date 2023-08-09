@@ -123,6 +123,13 @@ public class GraphVertex : MonoBehaviour
         nameInput.gameObject.SetActive(false);
     }
 
+    public void DestroyInfoText()
+    {
+        Destroy(vertexInfoText);
+        vertexInfoText = null;
+        nameInput.gameObject.SetActive(true);
+    }
+
     public void AddVariable(string varName, object initialVal)
     {
         variables.Add(varName, initialVal);
@@ -137,6 +144,16 @@ public class GraphVertex : MonoBehaviour
     public object GetVariable(string varName)
     {
         return variables[varName];
+    }
+
+    public void RemoveVariable(string varName)
+    {
+        variables.Remove(varName);
+    }
+
+    public void ClearVariables()
+    {
+        variables.Clear();
     }
 
     public void UpdateInfoText()
@@ -186,9 +203,10 @@ public class GraphVertex : MonoBehaviour
         updatedVariables.Add(var);
     }
 
-    public void SortOutgoingEdges()
+    public void SortEdges()
     {
         outgoingEdges.Sort(new EdgeComparer());
+        incomingEdges.Sort(new EdgeComparer());
     }
 
     public override string ToString()

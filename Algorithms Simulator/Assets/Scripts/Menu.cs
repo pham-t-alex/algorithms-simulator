@@ -17,13 +17,9 @@ public class Menu : MonoBehaviour
         
     }
     
-    public void DirectedGraphs()
+    public void Graphs()
     {
-        SceneManager.LoadScene("DirectedGraphAlgs");
+        SceneManager.LoadScene("GraphAlgs");
     }
 
-    public void UndirectedGraphs()
-    {
-        SceneManager.LoadScene("UndirectedGraphAlgs");
-    }
 }
