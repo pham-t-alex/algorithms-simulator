@@ -371,6 +371,18 @@ public class DirectedGraphController : MonoBehaviour
         SetLogText("");
 
         vertices.Sort(new VertexComparer());
+
+        for (int i = 0; i < edges.Count; i++)
+        {
+            if (edges[i].Source == null && edges[i].Destination == null)
+            {
+                Edge e = edges[i];
+                edges.RemoveAt(i);
+                e.Destroy();
+                i--;
+            }
+        }
+
         edges.Sort(new EdgeComparer());
         foreach (GraphVertex v in vertices)
         {
@@ -378,6 +390,7 @@ public class DirectedGraphController : MonoBehaviour
             v.SortEdges();
             v.SetColor(Color.white);
         }
+        
         foreach (Edge e in edges)
         {
             e.CreateInfoText();

@@ -11,4 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/GraphAlgs.unity
     guid: 142650ceefcad414699878484c7242e3
+  - enabled: 1
+    path: Assets/Scenes/DisjointSet.unity
+    guid: 0f1f46733e0cb414ab2756df3ad05ef3
   m_configObjects: {}

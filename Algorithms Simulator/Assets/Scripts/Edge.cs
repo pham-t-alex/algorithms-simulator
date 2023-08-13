@@ -204,4 +204,10 @@ public class Edge : MonoBehaviour
     {
         return EdgeName;
     }
+
+    public void Destroy()
+    {
+        Destroy(weightInput.gameObject);
+        Destroy(gameObject);
+    }
 }

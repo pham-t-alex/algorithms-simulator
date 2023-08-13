@@ -1,25 +1,29 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
-public class Menu : MonoBehaviour
+public class SetText : InputText
 {
+    private DisjointSetElement element;
     // Start is called before the first frame update
     void Start()
     {
-        
+
     }
 
     // Update is called once per frame
     void Update()
     {
-        
-    }
-    
-    public void ChangeScene(string s)
-    {
-        SceneManager.LoadScene(s);
+
     }
 
+    public void UpdateElementName(string s)
+    {
+        element.SetName(s);
+    }
+
+    public void SetElement(DisjointSetElement e)
+    {
+        element = e;
+    }
 }
