@@ -44,6 +44,13 @@ public class DisjointSetController : MonoBehaviour
 
     private bool frozen = false;
     private bool usingRank = false;
+    public bool UsingRank
+    {
+        get
+        {
+            return usingRank;
+        }
+    }
     private bool selectingPhase = false;
     private bool running = false;
     private GameObject selectedObject;
@@ -64,8 +71,11 @@ public class DisjointSetController : MonoBehaviour
     [SerializeField] private GameObject animSpeed;
 
     private string currentAlgorithm;
+    
     private DisjointSetElement element1;
     private DisjointSetElement element2;
+
+    private DisjointSetElement foundElement;
 
     // Start is called before the first frame update
     void Start()
@@ -73,8 +83,7 @@ public class DisjointSetController : MonoBehaviour
         sourceText.SetActive(false);
         runtimeUI.SetActive(false);
         endButton.SetActive(false);
-        vertexSelected.SetActive(false);
-        vertexSelected2.SetActive(false);
+        NotSelected();
     }
 
     // Update is called once per frame
@@ -143,6 +152,10 @@ public class DisjointSetController : MonoBehaviour
     public void ToggleRankSize()
     {
         usingRank = !usingRank;
+        foreach (DisjointSetElement e in disjointSetElements)
+        {
+            e.Reset();
+        }
         if (usingRank)
         {
             rankOrSize.GetComponent<TMP_Text>().text = "current:\nRank";
@@ -202,7 +215,7 @@ public class DisjointSetController : MonoBehaviour
             {
                 if (element.MouseTouching)
                 {
-                    if (element1 != null && element != element1)
+                    if (element1 != null)
                     {
                         element2 = element;
                         RunAlgorithm();
@@ -306,11 +319,201 @@ public class DisjointSetController : MonoBehaviour
 
     public IEnumerator Find()
     {
+        Stack<DisjointSetElement> elements = new Stack<DisjointSetElement>();
+        SetLogText("Find(" + element1.ElementName + ")");
+        DisjointSetElement currentElement = element1;
+        SetSelectedOne(currentElement);
+        DisjointSetArrow previousArrow = null;
+        DisjointSetElement previousElement = null;
+
+        yield return new WaitForSeconds(3 / animationSpeed);
+
+        while (currentElement.Rep != currentElement)
+        {
+            elements.Push(currentElement);
+            currentElement = currentElement.Rep;
+            SetSelectedOne(currentElement);
+            yield return new WaitForSeconds(2 / animationSpeed);
+        }
+        SetSelectedOne(currentElement);
+        yield return new WaitForSeconds(1 / animationSpeed);
+        DisjointSetElement rep = currentElement;
+
+        while (elements.Count > 0)
+        {
+            currentElement = elements.Pop();
+            SetSelectedOne(currentElement);
+            currentElement.ChangeRep(rep);
+            currentElement.Arrow.SetColor(new Color(0.4f, 0, 1));
+            if (previousArrow != null)
+            {
+                previousArrow.SetColor(Color.white);
+            }
+            previousArrow = currentElement.Arrow;
+            currentElement.UpdateInfoText();
+            if (previousElement != null)
+            {
+                previousElement.UpdateInfoText();
+            }
+            previousElement = currentElement;
+            yield return new WaitForSeconds(2 / animationSpeed);
+        }
+
+        if (previousArrow != null)
+        {
+            previousArrow.SetColor(Color.white);
+        }
+        currentElement.UpdateInfoText();
+        if (previousElement != null)
+        {
+            previousElement.UpdateInfoText();
+        }
+        NotSelectedOne();
+        SetLogText("Find(" + element1.ElementName + ") -> " + rep.ElementName);
+
         yield return null;
     }
 
     public IEnumerator Union()
     {
+        SetLogText("Union(" + element1.ElementName + ", " + element2.ElementName + ")");
+        yield return FindForUnion(element1, 1);
+        DisjointSetElement rep1 = foundElement;
+        yield return FindForUnion(element2, 2);
+        DisjointSetElement rep2 = foundElement;
+
+
+        if (rep1 != rep2)
+        {
+            if (usingRank)
+            {
+                if (rep1.Rank > rep2.Rank)
+                {
+                    rep2.ChangeRep(rep1);
+                }
+                else
+                {
+                    rep1.ChangeRep(rep2);
+                    if (rep1.Rank == rep2.Rank)
+                    {
+                        rep2.IncrementRank();
+                    }
+                }
+            }
+            else
+            {
+                if (rep1.Size > rep2.Size)
+                {
+                    rep2.ChangeRep(rep1);
+                    rep1.AddToSize(rep2.Size);
+                }
+                else
+                {
+                    rep1.ChangeRep(rep2);
+                    rep2.AddToSize(rep1.Size);
+                }
+            }
+            rep1.UpdateInfoText();
+            rep2.UpdateInfoText();
+            SetLogText("Union(" + element1.ElementName + ", " + element2.ElementName + ") -> True");
+        }
+        else
+        {
+            SetLogText("Union(" + element1.ElementName + ", " + element2.ElementName + ") -> False");
+        }
+
         yield return null;
+    }
+
+    public IEnumerator FindForUnion(DisjointSetElement e, int side)
+    {
+        Stack<DisjointSetElement> elements = new Stack<DisjointSetElement>();
+        DisjointSetElement currentElement;
+        if (side == 1)
+        {
+            currentElement = element1;
+        }
+        else
+        {
+            currentElement = element2;
+        }
+        
+        //SetSelectedOne(currentElement);
+        DisjointSetArrow previousArrow = null;
+        DisjointSetElement previousElement = null;
+
+        yield return new WaitForSeconds(1 / animationSpeed);
+
+        while (currentElement.Rep != currentElement)
+        {
+            elements.Push(currentElement);
+            currentElement = currentElement.Rep;
+            SetSelectedOne(currentElement);
+            yield return new WaitForSeconds(1 / animationSpeed);
+        }
+        //SetSelectedOne(currentElement);
+        yield return new WaitForSeconds(1 / animationSpeed);
+        DisjointSetElement rep = currentElement;
+        foundElement = rep;
+
+        while (elements.Count > 0)
+        {
+            currentElement = elements.Pop();
+            //SetSelectedOne(currentElement);
+            currentElement.ChangeRep(rep);
+            currentElement.Arrow.SetColor(new Color(0.4f, 0, 1));
+            if (previousArrow != null)
+            {
+                previousArrow.SetColor(Color.white);
+            }
+            previousArrow = currentElement.Arrow;
+            currentElement.UpdateInfoText();
+            if (previousElement != null)
+            {
+                previousElement.UpdateInfoText();
+            }
+            previousElement = currentElement;
+            yield return new WaitForSeconds(1 / animationSpeed);
+        }
+
+        if (previousArrow != null)
+        {
+            previousArrow.SetColor(Color.white);
+        }
+        currentElement.UpdateInfoText();
+        if (previousElement != null)
+        {
+            previousElement.UpdateInfoText();
+        }
+        //NotSelectedOne();
+
+        yield return null;
+    }
+
+    public void SetSelectedOne(DisjointSetElement e)
+    {
+        vertexSelected.transform.position = e.transform.position;
+        vertexSelected.GetComponent<SpriteRenderer>().enabled = true;
+    }
+
+    public void SetSelectedTwo(DisjointSetElement e)
+    {
+        vertexSelected2.transform.position = e.transform.position;
+        vertexSelected2.GetComponent<SpriteRenderer>().enabled = true;
+    }
+
+    public void NotSelectedOne()
+    {
+        vertexSelected.GetComponent<SpriteRenderer>().enabled = false;
+    }
+    public void NotSelectedTwo()
+    {
+        vertexSelected2.GetComponent<SpriteRenderer>().enabled = false;
+    }
+
+    public void NotSelected()
+    {
+        NotSelectedOne();
+        NotSelectedTwo();
     }
 }
