@@ -55,6 +55,8 @@ public class DisjointSetElement : MonoBehaviour
             return arrow;
         }
     }
+    private List<DisjointSetArrow> incomingArrows = new List<DisjointSetArrow>();
+
     private GameObject infoText;
     private bool sizeRankUpdated;
     private bool repUpdated;
@@ -71,6 +73,7 @@ public class DisjointSetElement : MonoBehaviour
         arrow.SetElements(this, this);
         sizeRankUpdated = false;
         repUpdated = false;
+        incomingArrows.Add(arrow);
     }
 
     // Update is called once per frame
@@ -93,6 +96,13 @@ public class DisjointSetElement : MonoBehaviour
     {
         textInput.transform.position = transform.position;
         arrow.UpdatePosition();
+        foreach (DisjointSetArrow a in incomingArrows)
+        {
+            if (a.Source != this)
+            {
+                a.UpdatePosition();
+            }
+        }
     }
 
     public void SetColor(Color color)
@@ -182,7 +192,9 @@ public class DisjointSetElement : MonoBehaviour
         {
             return;
         }
+        rep.incomingArrows.Remove(arrow);
         rep = e;
+        e.incomingArrows.Add(arrow);
         arrow.SetElements(this, e);
         arrow.UpdatePosition();
         repUpdated = true;

@@ -56,7 +56,7 @@ public class DisjointSetController : MonoBehaviour
     private GameObject selectedObject;
     private float selectedTime = float.MinValue;
     private Vector3 prevMousePosition;
-    private float animationSpeed;
+    private float animationSpeed = 1;
 
     private List<DisjointSetElement> disjointSetElements = new List<DisjointSetElement>();
     [SerializeField] private GameObject algButtons;
@@ -285,9 +285,6 @@ public class DisjointSetController : MonoBehaviour
         backButton.SetActive(false);
         sourceText.SetActive(false);
 
-        animationSpeed = 1;
-        animSpeed.GetComponent<Slider>().value = 1;
-
         runtimeUI.SetActive(true);
         SetLogText("");
 
@@ -371,7 +368,7 @@ public class DisjointSetController : MonoBehaviour
         NotSelectedOne();
         SetLogText("Find(" + element1.ElementName + ") -> " + rep.ElementName);
 
-        yield return null;
+        yield return End();
     }
 
     public IEnumerator Union()
@@ -379,9 +376,13 @@ public class DisjointSetController : MonoBehaviour
         SetLogText("Union(" + element1.ElementName + ", " + element2.ElementName + ")");
         yield return FindForUnion(element1, 1);
         DisjointSetElement rep1 = foundElement;
+        SetSelectedOne(rep1);
         yield return FindForUnion(element2, 2);
         DisjointSetElement rep2 = foundElement;
+        SetSelectedTwo(rep2);
 
+        yield return new WaitForSeconds(1 / animationSpeed);
+        DisjointSetArrow updatedArrow = null;
 
         if (rep1 != rep2)
         {
@@ -390,6 +391,7 @@ public class DisjointSetController : MonoBehaviour
                 if (rep1.Rank > rep2.Rank)
                 {
                     rep2.ChangeRep(rep1);
+                    updatedArrow = rep2.Arrow;
                 }
                 else
                 {
@@ -398,6 +400,7 @@ public class DisjointSetController : MonoBehaviour
                     {
                         rep2.IncrementRank();
                     }
+                    updatedArrow = rep1.Arrow;
                 }
             }
             else
@@ -406,13 +409,16 @@ public class DisjointSetController : MonoBehaviour
                 {
                     rep2.ChangeRep(rep1);
                     rep1.AddToSize(rep2.Size);
+                    updatedArrow = rep2.Arrow;
                 }
                 else
                 {
                     rep1.ChangeRep(rep2);
                     rep2.AddToSize(rep1.Size);
+                    updatedArrow = rep1.Arrow;
                 }
             }
+            updatedArrow.SetColor(new Color(0.4f, 0, 1));
             rep1.UpdateInfoText();
             rep2.UpdateInfoText();
             SetLogText("Union(" + element1.ElementName + ", " + element2.ElementName + ") -> True");
@@ -421,8 +427,16 @@ public class DisjointSetController : MonoBehaviour
         {
             SetLogText("Union(" + element1.ElementName + ", " + element2.ElementName + ") -> False");
         }
+        yield return new WaitForSeconds(2 / animationSpeed);
+        if (updatedArrow != null)
+        {
+            updatedArrow.SetColor(Color.white);
+        }
+        rep1.UpdateInfoText();
+        rep2.UpdateInfoText();
 
-        yield return null;
+        NotSelected();
+        yield return End();
     }
 
     public IEnumerator FindForUnion(DisjointSetElement e, int side)
@@ -438,7 +452,14 @@ public class DisjointSetController : MonoBehaviour
             currentElement = element2;
         }
         
-        //SetSelectedOne(currentElement);
+        if (side == 1)
+        {
+            SetSelectedOne(currentElement);
+        }
+        else
+        {
+            SetSelectedTwo(currentElement);
+        }
         DisjointSetArrow previousArrow = null;
         DisjointSetElement previousElement = null;
 
@@ -448,10 +469,24 @@ public class DisjointSetController : MonoBehaviour
         {
             elements.Push(currentElement);
             currentElement = currentElement.Rep;
-            SetSelectedOne(currentElement);
+            if (side == 1)
+            {
+                SetSelectedOne(currentElement);
+            }
+            else
+            {
+                SetSelectedTwo(currentElement);
+            }
             yield return new WaitForSeconds(1 / animationSpeed);
         }
-        //SetSelectedOne(currentElement);
+        if (side == 1)
+        {
+            SetSelectedOne(currentElement);
+        }
+        else
+        {
+            SetSelectedTwo(currentElement);
+        }
         yield return new WaitForSeconds(1 / animationSpeed);
         DisjointSetElement rep = currentElement;
         foundElement = rep;
@@ -459,7 +494,14 @@ public class DisjointSetController : MonoBehaviour
         while (elements.Count > 0)
         {
             currentElement = elements.Pop();
-            //SetSelectedOne(currentElement);
+            if (side == 1)
+            {
+                SetSelectedOne(currentElement);
+            }
+            else
+            {
+                SetSelectedTwo(currentElement);
+            }
             currentElement.ChangeRep(rep);
             currentElement.Arrow.SetColor(new Color(0.4f, 0, 1));
             if (previousArrow != null)
@@ -485,9 +527,35 @@ public class DisjointSetController : MonoBehaviour
         {
             previousElement.UpdateInfoText();
         }
-        //NotSelectedOne();
 
         yield return null;
+    }
+
+    public IEnumerator End()
+    {
+        yield return new WaitForSeconds(3 / animationSpeed);
+        endButton.SetActive(true);
+    }
+
+    public void EndAlgorithm()
+    {
+        endButton.SetActive(false);
+        running = false;
+        runtimeUI.SetActive(false);
+        SetLogText("");
+
+        foreach (DisjointSetElement e in disjointSetElements)
+        {
+            e.DestroyInfoText();
+            e.SetColor(Color.white);
+            e.Arrow.SetColor(Color.white);
+        }
+
+        backButton.SetActive(true);
+        currentAlgorithm = null;
+        algButtons.SetActive(true);
+        element1 = null;
+        element2 = null;
     }
 
     public void SetSelectedOne(DisjointSetElement e)
@@ -516,4 +584,5 @@ public class DisjointSetController : MonoBehaviour
         NotSelectedOne();
         NotSelectedTwo();
     }
+
 }

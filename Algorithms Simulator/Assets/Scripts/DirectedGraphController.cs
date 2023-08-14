@@ -364,9 +364,6 @@ public class DirectedGraphController : MonoBehaviour
         backButton.SetActive(false);
         sourceVertexText.SetActive(false);
 
-        animationSpeed = 1;
-        animSpeed.GetComponent<Slider>().value = 1;
-
         runtimeUI.SetActive(true);
         SetLogText("");
 
