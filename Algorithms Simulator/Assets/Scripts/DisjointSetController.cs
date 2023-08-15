@@ -280,6 +280,21 @@ public class DisjointSetController : MonoBehaviour
 
     public void RunAlgorithm()
     {
+        if (currentAlgorithm == "UnionInstant")
+        {
+            foreach (DisjointSetElement e in disjointSetElements)
+            {
+                e.SetColor(Color.white);
+            }
+            UnionInstant();
+            element1 = null;
+            element2 = null;
+            currentAlgorithm = null;
+            selectingPhase = false;
+            sourceText.SetActive(false);
+            algButtons.SetActive(true);
+            return;
+        }
         running = true;
         selectingPhase = false;
         backButton.SetActive(false);
@@ -529,6 +544,66 @@ public class DisjointSetController : MonoBehaviour
         }
 
         yield return null;
+    }
+
+    public void UnionInstant()
+    {
+        DisjointSetElement rep1 = FindForUnionInstant(element1);
+        DisjointSetElement rep2 = FindForUnionInstant(element2);
+
+        if (rep1 != rep2)
+        {
+            if (usingRank)
+            {
+                if (rep1.Rank > rep2.Rank)
+                {
+                    rep2.ChangeRep(rep1);
+                }
+                else
+                {
+                    rep1.ChangeRep(rep2);
+                    if (rep1.Rank == rep2.Rank)
+                    {
+                        rep2.IncrementRank();
+                    }
+                }
+            }
+            else
+            {
+                if (rep1.Size > rep2.Size)
+                {
+                    rep2.ChangeRep(rep1);
+                    rep1.AddToSize(rep2.Size);
+                }
+                else
+                {
+                    rep1.ChangeRep(rep2);
+                    rep2.AddToSize(rep1.Size);
+                }
+            }
+        }
+    }
+
+    public DisjointSetElement FindForUnionInstant(DisjointSetElement e)
+    {
+        Stack<DisjointSetElement> elements = new Stack<DisjointSetElement>();
+        DisjointSetElement currentElement = e;
+
+        while (currentElement.Rep != currentElement)
+        {
+            elements.Push(currentElement);
+            currentElement = currentElement.Rep;
+        }
+
+        DisjointSetElement rep = currentElement;
+
+        while (elements.Count > 0)
+        {
+            currentElement = elements.Pop();
+            currentElement.ChangeRep(rep);
+        }
+
+        return rep;
     }
 
     public IEnumerator End()
