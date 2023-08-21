@@ -127,7 +127,7 @@ public class HeapElement : MonoBehaviour
     {
         if (heapConnector != null)
         {
-            Destroy(heapConnector);
+            Destroy(heapConnector.gameObject);
         }
         Destroy(textInput.gameObject);
         Destroy(gameObject);
