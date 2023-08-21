@@ -645,7 +645,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Algorithms Simulator
+  m_text: Data Structures/Algorithms Simulator
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 381a79a2da2efdb41a3786e84d42b3c8, type: 2}
   m_sharedMaterial: {fileID: -5013723655748893096, guid: 381a79a2da2efdb41a3786e84d42b3c8, type: 2}
@@ -672,8 +672,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 80
-  m_fontSizeBase: 80
+  m_fontSize: 46
+  m_fontSizeBase: 46
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -1060,7 +1060,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Heaps
+  m_text: 'Binary
+
+    Heaps'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 381a79a2da2efdb41a3786e84d42b3c8, type: 2}
   m_sharedMaterial: {fileID: -5013723655748893096, guid: 381a79a2da2efdb41a3786e84d42b3c8, type: 2}
@@ -1471,7 +1473,7 @@ MonoBehaviour:
     m_PressedTrigger: Pressed
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
-  m_Interactable: 0
+  m_Interactable: 1
   m_TargetGraphic: {fileID: 2086600427}
   m_OnClick:
     m_PersistentCalls:

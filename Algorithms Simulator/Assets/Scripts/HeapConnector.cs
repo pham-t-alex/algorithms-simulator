@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class DisjointSetArrow : Arrow<DisjointSetElement>
+public class HeapConnector : Segment<HeapElement>
 {
     
 }

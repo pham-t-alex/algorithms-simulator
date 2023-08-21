@@ -26,6 +26,10 @@ public abstract class InputText : MonoBehaviour
         {
             DisjointSetController.SetController.Freeze();
         }
+        else if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "Heaps")
+        {
+            HeapController.HeapMainController.Freeze();
+        }
     }
 
     public void Unfreeze()
@@ -37,6 +41,10 @@ public abstract class InputText : MonoBehaviour
         else if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "DisjointSet")
         {
             DisjointSetController.SetController.Unfreeze();
+        }
+        else if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "Heaps")
+        {
+            HeapController.HeapMainController.Unfreeze();
         }
     }
 }
