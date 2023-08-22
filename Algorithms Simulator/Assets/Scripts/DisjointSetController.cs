@@ -108,27 +108,27 @@ public class DisjointSetController : MonoBehaviour
     {
         if (Input.GetKey(KeyCode.A))
         {
-            ScreenCamera.transform.Translate(Vector3.left * 0.01f * Mathf.Sqrt(ScreenCamera.orthographicSize));
+            ScreenCamera.transform.Translate(Vector3.left * 5f * Mathf.Sqrt(ScreenCamera.orthographicSize) * Time.deltaTime);
         }
         if (Input.GetKey(KeyCode.S))
         {
-            ScreenCamera.transform.Translate(Vector3.down * 0.01f * Mathf.Sqrt(ScreenCamera.orthographicSize));
+            ScreenCamera.transform.Translate(Vector3.down * 5f * Mathf.Sqrt(ScreenCamera.orthographicSize) * Time.deltaTime);
         }
         if (Input.GetKey(KeyCode.W))
         {
-            ScreenCamera.transform.Translate(Vector3.up * 0.01f * Mathf.Sqrt(ScreenCamera.orthographicSize));
+            ScreenCamera.transform.Translate(Vector3.up * 5f * Mathf.Sqrt(ScreenCamera.orthographicSize) * Time.deltaTime);
         }
         if (Input.GetKey(KeyCode.D))
         {
-            ScreenCamera.transform.Translate(Vector3.right * 0.01f * Mathf.Sqrt(ScreenCamera.orthographicSize));
+            ScreenCamera.transform.Translate(Vector3.right * 5f * Mathf.Sqrt(ScreenCamera.orthographicSize) * Time.deltaTime);
         }
         if (Input.GetKey(KeyCode.Z))
         {
-            ScreenCamera.orthographicSize /= 1.002f;
+            ScreenCamera.orthographicSize /= (1 + 1f * Time.deltaTime);
         }
         if (Input.GetKey(KeyCode.X))
         {
-            ScreenCamera.orthographicSize *= 1.002f;
+            ScreenCamera.orthographicSize *= (1 + 1f * Time.deltaTime);
         }
     }
 
