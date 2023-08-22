@@ -60,6 +60,8 @@ public class HeapController : MonoBehaviour
 
     private List<HeapElement> elements = new List<HeapElement>();
 
+    private List<Comparison> comparisons = new List<Comparison>();
+
     [SerializeField] private GameObject heapAsArray;
     [SerializeField] private GameObject heapAsArrayText;
     [SerializeField] private GameObject defaultUI;
@@ -76,6 +78,7 @@ public class HeapController : MonoBehaviour
     [SerializeField] private GameObject elementSelected;
     [SerializeField] private GameObject elementSelected2;
     [SerializeField] private GameObject insertInput;
+    [SerializeField] private GameObject heapSortButton;
 
     private HeapElement sourceElement;
     private string currentAlg;
@@ -102,7 +105,7 @@ public class HeapController : MonoBehaviour
         }
         if (selectingPhase)
         {
-            
+            SelectElement();
         }
         else if (!running && !algMenu.activeSelf && !addUI.activeSelf)
         {
@@ -154,6 +157,7 @@ public class HeapController : MonoBehaviour
         usingMin = false;
         maxCheck.SetActive(true);
         minCheck.SetActive(false);
+        heapSortButton.GetComponent<UnityEngine.UI.Button>().interactable = true;
     }
 
     public void SetMin()
@@ -161,6 +165,23 @@ public class HeapController : MonoBehaviour
         usingMin = true;
         maxCheck.SetActive(false);
         minCheck.SetActive(true);
+        heapSortButton.GetComponent<UnityEngine.UI.Button>().interactable = false;
+    }
+
+    public void SelectElement()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            foreach (HeapElement element in elements)
+            {
+                if (element.MouseTouching)
+                {
+                    sourceElement = element;
+                    RunAlgorithm();
+                    return;
+                }
+            }
+        }
     }
 
     public void NotRunning()
@@ -289,6 +310,7 @@ public class HeapController : MonoBehaviour
     public void RunAlgorithm()
     {
         Unselect();
+        comparisons.Clear();
         running = true;
         selectingPhase = false;
         backButton.SetActive(false);
@@ -313,10 +335,13 @@ public class HeapController : MonoBehaviour
                 StartCoroutine(HeapRemove());
                 break;
             case "Heapify":
+                StartCoroutine(Heapify());
                 break;
             case "BuildHeap":
+                StartCoroutine(BuildHeap());
                 break;
             case "HeapSort":
+                StartCoroutine(HeapSort());
                 break;
         }
     }
@@ -423,6 +448,7 @@ public class HeapController : MonoBehaviour
 
     public void EndAlgorithm()
     {
+        comparisons.Clear();
         endButton.SetActive(false);
         running = false;
         runtimeUI.SetActive(false);
@@ -471,6 +497,7 @@ public class HeapController : MonoBehaviour
             highlights.Add(parent);
             UpdateHeapAsArray(highlights);
             SetLogText("Comparing: " + child.ElementValue + " v. " + parent.ElementValue);
+            comparisons.Add(new Comparison(child.ElementValue, parent.ElementValue));
             SelectOne(child);
             SelectTwo(parent);
 
@@ -541,10 +568,14 @@ public class HeapController : MonoBehaviour
         HeapElement last = elements[elements.Count - 1];
         SetLogText("Deleted " + last.ElementValue);
 
-        HeapElement parent = elements[(elements.Count - 2) / 2];
+        HeapElement parent = null;
+        if (elements.Count > 1)
+        {
+            parent = elements[(elements.Count - 2) / 2];
+        }
         elements.RemoveAt(elements.Count - 1);
 
-        if (last.HeapElementConnector != null)
+        if (last.HeapElementConnector != null && elements.Count > 0)
         {
             parent.RemoveIncomingConnector(last.HeapElementConnector);
         }
@@ -552,15 +583,130 @@ public class HeapController : MonoBehaviour
         UpdateHeapAsArray(null);
         yield return new WaitForSeconds(2 / animationSpeed);
 
-        int currIndex = 0;
+        yield return HeapifyHelper(0, elements.Count);
 
-        while (currIndex < elements.Count / 2)
+        Unselect();
+        SetLogText("");
+        UpdateHeapAsArray(null);
+        yield return End();
+    }
+
+    public IEnumerator Heapify()
+    {
+        int index = 0;
+        while (index < elements.Count && elements[index] != sourceElement)
+        {
+            index++;
+        }
+        if (index == elements.Count)
+        {
+            yield return End();
+            yield break;
+        }
+
+        yield return HeapifyHelper(index, elements.Count);
+
+        Unselect();
+        SetLogText("");
+        UpdateHeapAsArray(null);
+        yield return End();
+    }
+
+    public IEnumerator BuildHeap()
+    {
+        yield return BuildHeapHelper();
+
+        Unselect();
+        SetLogText("");
+        UpdateHeapAsArray(null);
+        yield return End();
+    }
+
+    public IEnumerator HeapSort()
+    {
+        yield return BuildHeapHelper();
+
+        string buildHeapComparisons = ComparisonsToString();
+        comparisons.Clear();
+
+        int arrayCount = elements.Count;
+        List<HeapElement> highlights = new List<HeapElement>();
+        while (arrayCount > 0)
+        {
+            Unselect();
+            SelectOne(elements[0]);
+            highlights.Add(elements[0]);
+            UpdateHeapAsArray(highlights);
+            highlights.Clear();
+            SetLogText("Moving " + elements[0].ElementValue + " to end");
+            yield return new WaitForSeconds(2 / animationSpeed);
+
+            if (arrayCount > 1)
+            {
+                HeapElement lastElement = elements[arrayCount - 1];
+                HeapElement top = elements[0];
+                highlights.Add(lastElement);
+                highlights.Add(top);
+                UpdateHeapAsArray(highlights);
+                SelectOne(top);
+                SelectTwo(lastElement);
+
+                SetLogText("Swapping " + top.ElementValue + " and " + lastElement.ElementValue);
+
+                yield return new WaitForSeconds(2 / animationSpeed);
+
+                SwapValues(top, lastElement);
+                SetLogText("Swapped: " + lastElement.ElementValue + ", " + top.ElementValue);
+
+                UpdateHeapAsArray(highlights);
+            }
+            else
+            {
+                SelectTwo(elements[0]);
+                highlights.Add(elements[0]);
+                UpdateHeapAsArray(highlights);
+            }
+            highlights.Clear();
+
+            yield return new WaitForSeconds(3 / animationSpeed);
+
+            UnselectOne();
+            HeapElement last = elements[arrayCount - 1];
+            SetLogText("Sorted " + last.ElementValue);
+            highlights.Add(last);
+
+            UpdateHeapAsArray(highlights);
+            last.SetColor(new Color(0.6f, 0.6f, 0.6f));
+            highlights.Clear();
+            yield return new WaitForSeconds(2 / animationSpeed);
+
+            arrayCount--;
+
+            yield return HeapifyHelper(0, arrayCount);
+            Unselect();
+            UpdateHeapAsArray(null);
+            yield return new WaitForSeconds(1 / animationSpeed);
+        }
+
+        Unselect();
+        SetLogText("<size=15>BuildHeap Comparisons: " + buildHeapComparisons + " | Other Comparisons: " + ComparisonsToString() + "</size>");
+        UpdateHeapAsArray(null);
+        yield return End();
+    }
+
+    public IEnumerator HeapifyHelper(int index, int arrayLength)
+    {
+        int currIndex = index;
+        List<HeapElement> highlights = new List<HeapElement>();
+
+        while (currIndex < arrayLength / 2)
         {
             HeapElement one = elements[currIndex];
             HeapElement two = elements[currIndex * 2 + 1];
             highlights.Add(one);
             highlights.Add(two);
             SetLogText("Comparing: " + one.ElementValue + " v. " + two.ElementValue);
+            comparisons.Add(new Comparison(one.ElementValue, two.ElementValue));
             UpdateHeapAsArray(highlights);
             SelectOne(one);
             SelectTwo(two);
@@ -569,7 +715,7 @@ public class HeapController : MonoBehaviour
 
             if ((usingMin && one.ElementValue > two.ElementValue) || (!usingMin && one.ElementValue < two.ElementValue))
             {
-                if (currIndex * 2 + 2 < elements.Count)
+                if (currIndex * 2 + 2 < arrayLength)
                 {
                     highlights.Remove(one);
                     highlights.Remove(two);
@@ -578,6 +724,7 @@ public class HeapController : MonoBehaviour
                     highlights.Add(one);
                     highlights.Add(two);
                     SetLogText("Comparing: " + one.ElementValue + " v. " + two.ElementValue);
+                    comparisons.Add(new Comparison(one.ElementValue, two.ElementValue));
                     UpdateHeapAsArray(highlights);
                     SelectOne(one);
                     SelectTwo(two);
@@ -598,7 +745,7 @@ public class HeapController : MonoBehaviour
                     }
                     highlights.Add(one);
                     highlights.Add(two);
-                    
+
                     SwapValues(one, two);
                     UpdateHeapAsArray(highlights);
                     SelectOne(one);
@@ -608,7 +755,7 @@ public class HeapController : MonoBehaviour
 
                     yield return new WaitForSeconds(2 / animationSpeed);
 
-                    
+
                 }
                 else
                 {
@@ -624,12 +771,13 @@ public class HeapController : MonoBehaviour
             }
             else
             {
-                if (currIndex * 2 + 2 < elements.Count)
+                if (currIndex * 2 + 2 < arrayLength)
                 {
                     highlights.Remove(two);
                     two = elements[currIndex * 2 + 2];
                     highlights.Add(two);
                     SetLogText("Comparing: " + one.ElementValue + " v. " + two.ElementValue);
+                    comparisons.Add(new Comparison(one.ElementValue, two.ElementValue));
                     UpdateHeapAsArray(highlights);
                     SelectTwo(two);
 
@@ -658,13 +806,44 @@ public class HeapController : MonoBehaviour
             }
             highlights.Clear();
         }
-
-        Unselect();
-        SetLogText("");
-        UpdateHeapAsArray(null);
-        yield return End();
     }
 
+    public IEnumerator BuildHeapHelper()
+    {
+        if (elements.Count < 2)
+        {
+            yield break;
+        }
+
+        int currIndex = (elements.Count - 2) / 2;
+        while (currIndex >= 0)
+        {
+            Unselect();
+            SelectOne(elements[currIndex]);
+            SetLogText("MaxHeapify on " + elements[currIndex].ElementValue);
+            yield return new WaitForSeconds(2 / animationSpeed);
+
+            yield return HeapifyHelper(currIndex, elements.Count);
+
+            currIndex = currIndex - 1;
+        }
+
+        yield return null;
+    }
+
+    public string ComparisonsToString()
+    {
+        string s = "";
+        if (comparisons.Count > 0)
+        {
+            s += comparisons[0].ToString();
+            for (int i = 1; i < comparisons.Count; i++)
+            {
+                s += ", " + comparisons[i].ToString();
+            }
+        }
+        return s;
+    }
 
     public void SelectOne(HeapElement e)
     {
