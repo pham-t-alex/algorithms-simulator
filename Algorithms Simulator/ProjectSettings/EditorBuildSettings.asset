@@ -17,4 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Heaps.unity
     guid: 799cd7743a2b3dc409f6a68641b21fd9
+  - enabled: 1
+    path: Assets/Scenes/Sorts.unity
+    guid: 9ebe178a39988d34abae1df7d63d9e55
   m_configObjects: {}
