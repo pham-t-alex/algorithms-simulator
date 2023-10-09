@@ -57,6 +57,8 @@ public class DisjointSetController : MonoBehaviour
     private float selectedTime = float.MinValue;
     private Vector3 prevMousePosition;
     private float animationSpeed = 1;
+    private bool paused;
+    private bool stepping;
 
     private List<DisjointSetElement> disjointSetElements = new List<DisjointSetElement>();
     [SerializeField] private GameObject algButtons;
@@ -69,6 +71,9 @@ public class DisjointSetController : MonoBehaviour
     [SerializeField] private GameObject vertexSelected2;
     [SerializeField] private GameObject log;
     [SerializeField] private GameObject animSpeed;
+    [SerializeField] private GameObject pause;
+    [SerializeField] private GameObject step;
+    [SerializeField] private GameObject pauseText;
 
     private string currentAlgorithm;
     
@@ -140,6 +145,24 @@ public class DisjointSetController : MonoBehaviour
     public void Unfreeze()
     {
         frozen = false;
+    }
+
+    public void Pause()
+    {
+        if (paused)
+        {
+            paused = false;
+            step.GetComponent<UnityEngine.UI.Button>().interactable = false;
+        }
+        else
+        {
+            paused = true;
+        }
+    }
+
+    public void Step()
+    {
+        stepping = true;
     }
 
     public void CreateElement()
@@ -309,6 +332,12 @@ public class DisjointSetController : MonoBehaviour
             e.SetColor(Color.white);
         }
 
+        paused = false;
+        stepping = false;
+        pauseText.SetActive(false);
+        pause.GetComponent<UnityEngine.UI.Button>().interactable = true;
+        step.GetComponent<UnityEngine.UI.Button>().interactable = false;
+
         if (currentAlgorithm == "Find")
         {
             StartCoroutine(Find());
@@ -321,12 +350,25 @@ public class DisjointSetController : MonoBehaviour
 
     public void ChangeAnimationSpeed(float f)
     {
-        animationSpeed = f;
+        animationSpeed = Mathf.Pow(2, f);
     }
 
     public void SetLogText(string s)
     {
         log.GetComponent<TMP_Text>().text = s;
+    }
+
+    public IEnumerator WaitUntilPlaying()
+    {
+        if (paused && !stepping)
+        {
+            step.GetComponent<Button>().interactable = true;
+            pauseText.SetActive(true);
+        }
+        yield return new WaitUntil(() => stepping | !paused);
+        stepping = false;
+        pauseText.SetActive(false);
+        step.GetComponent<Button>().interactable = false;
     }
 
     public IEnumerator Find()
@@ -339,6 +381,8 @@ public class DisjointSetController : MonoBehaviour
         DisjointSetElement previousElement = null;
 
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
+        SetLogText("Find(" + element1.ElementName + ")");
 
         while (currentElement.Rep != currentElement)
         {
@@ -346,6 +390,8 @@ public class DisjointSetController : MonoBehaviour
             currentElement = currentElement.Rep;
             SetSelectedOne(currentElement);
             yield return new WaitForSeconds(2 / animationSpeed);
+            yield return WaitUntilPlaying();
+            SetLogText("Find(" + element1.ElementName + ")");
         }
         SetSelectedOne(currentElement);
         yield return new WaitForSeconds(1 / animationSpeed);
@@ -369,6 +415,8 @@ public class DisjointSetController : MonoBehaviour
             }
             previousElement = currentElement;
             yield return new WaitForSeconds(2 / animationSpeed);
+            yield return WaitUntilPlaying();
+            SetLogText("Find(" + element1.ElementName + ")");
         }
 
         if (previousArrow != null)
@@ -443,6 +491,8 @@ public class DisjointSetController : MonoBehaviour
             SetLogText("Union(" + element1.ElementName + ", " + element2.ElementName + ") -> False");
         }
         yield return new WaitForSeconds(2 / animationSpeed);
+        yield return WaitUntilPlaying();
+        SetLogText("Union(" + element1.ElementName + ", " + element2.ElementName + ")");
         if (updatedArrow != null)
         {
             updatedArrow.SetColor(Color.white);
@@ -479,6 +529,14 @@ public class DisjointSetController : MonoBehaviour
         DisjointSetElement previousElement = null;
 
         yield return new WaitForSeconds(1 / animationSpeed);
+        if (side == 1)
+        {
+            SetLogText("Find(" + element1.ElementName + ")");
+        }
+        else
+        {
+            SetLogText("Find(" + element2.ElementName + ")");
+        }
 
         while (currentElement.Rep != currentElement)
         {
@@ -503,6 +561,15 @@ public class DisjointSetController : MonoBehaviour
             SetSelectedTwo(currentElement);
         }
         yield return new WaitForSeconds(1 / animationSpeed);
+        yield return WaitUntilPlaying();
+        if (side == 1)
+        {
+            SetLogText("Find(" + element1.ElementName + ")");
+        }
+        else
+        {
+            SetLogText("Find(" + element2.ElementName + ")");
+        }
         DisjointSetElement rep = currentElement;
         foundElement = rep;
 
@@ -531,6 +598,15 @@ public class DisjointSetController : MonoBehaviour
             }
             previousElement = currentElement;
             yield return new WaitForSeconds(1 / animationSpeed);
+        }
+        yield return WaitUntilPlaying();
+        if (side == 1)
+        {
+            SetLogText("Find(" + element1.ElementName + ")");
+        }
+        else
+        {
+            SetLogText("Find(" + element2.ElementName + ")");
         }
 
         if (previousArrow != null)

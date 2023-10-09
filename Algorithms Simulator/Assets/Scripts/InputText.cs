@@ -30,6 +30,10 @@ public abstract class InputText : MonoBehaviour
         {
             HeapController.HeapMainController.Freeze();
         }
+        else if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "Sorts")
+        {
+            SortsController.ListSortController.Freeze();
+        }
     }
 
     public void Unfreeze()
@@ -45,6 +49,10 @@ public abstract class InputText : MonoBehaviour
         else if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "Heaps")
         {
             HeapController.HeapMainController.Unfreeze();
+        }
+        else if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "Sorts")
+        {
+            SortsController.ListSortController.Unfreeze();
         }
     }
 }

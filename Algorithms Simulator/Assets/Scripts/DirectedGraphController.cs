@@ -43,6 +43,8 @@ public class DirectedGraphController : MonoBehaviour
     private GraphVertex edgeSourceSelected;
     private float selectedTime = float.MinValue;
     private Vector3 prevMousePosition;
+    private bool paused;
+    private bool stepping;
 
     private GraphVertex sourceVertex;
 
@@ -58,6 +60,9 @@ public class DirectedGraphController : MonoBehaviour
     [SerializeField] private GameObject vertexSelected;
     [SerializeField] private GameObject dfsKey;
     [SerializeField] private GameObject endButton;
+    [SerializeField] private GameObject pause;
+    [SerializeField] private GameObject step;
+    [SerializeField] private GameObject pauseText;
 
     private bool weighted = true;
     public bool Weighted
@@ -169,6 +174,24 @@ public class DirectedGraphController : MonoBehaviour
     public void Unfreeze()
     {
         frozen = false;
+    }
+
+    public void Pause()
+    {
+        if (paused)
+        {
+            paused = false;
+            step.GetComponent<UnityEngine.UI.Button>().interactable = false;
+        }
+        else
+        {
+            paused = true;
+        }
+    }
+
+    public void Step()
+    {
+        stepping = true;
     }
 
     public void SelectVertex()
@@ -365,7 +388,13 @@ public class DirectedGraphController : MonoBehaviour
         sourceVertexText.SetActive(false);
 
         runtimeUI.SetActive(true);
+        dfsKey.SetActive(false);
         SetLogText("");
+        paused = false;
+        stepping = false;
+        pauseText.SetActive(false);
+        pause.GetComponent<Button>().interactable = true;
+        step.GetComponent<Button>().interactable = false;
 
         vertices.Sort(new VertexComparer());
 
@@ -496,7 +525,7 @@ public class DirectedGraphController : MonoBehaviour
 
     public void ChangeAnimationSpeed(float f)
     {
-        animationSpeed = f;
+        animationSpeed = Mathf.Pow(2, f);
     }
 
     public void SetLogText(string s)
@@ -509,6 +538,19 @@ public class DirectedGraphController : MonoBehaviour
         algLog.GetComponent<TMP_Text>().text += s;
     }
 
+    public IEnumerator WaitUntilPlaying()
+    {
+        if (paused && !stepping)
+        {
+            step.GetComponent<UnityEngine.UI.Button>().interactable = true;
+            pauseText.SetActive(true);
+        }
+        yield return new WaitUntil(() => stepping | !paused);
+        stepping = false;
+        pauseText.SetActive(false);
+        step.GetComponent<UnityEngine.UI.Button>().interactable = false;
+    }
+
     public IEnumerator BFS()
     {
         List<GraphVertex> newAddedElements = new List<GraphVertex>();
@@ -519,6 +561,8 @@ public class DirectedGraphController : MonoBehaviour
         SetLogText(ListToString(vertexQueue, newAddedElements, "Queue"));
         newAddedElements.Clear();
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
+        sourceVertex.UpdateInfoText();
         while (vertexQueue.Count > 0)
         {
             GraphVertex currVertex = vertexQueue[0];
@@ -528,10 +572,11 @@ public class DirectedGraphController : MonoBehaviour
             yield return new WaitForSeconds(2 / animationSpeed);
             foreach (Edge e in currVertex.OutgoingEdges)
             {
-                e.SetColor(new Color(0.6f, 0.6f, 0.6f));
+                e.SetColor(new Color(0.8f, 0.8f, 0.8f));
                 GraphVertex destination = e.Destination;
                 if (!((bool) destination.GetVariable("disc.")))
                 {
+                    e.SetColor(new Color(0.4f, 0, 1f));
                     destination.SetVariable("disc.", true);
                     destination.SetVariable("d", ((int) currVertex.GetVariable("d")) + 1);
                     destination.SetVariable("pi", currVertex);
@@ -545,16 +590,18 @@ public class DirectedGraphController : MonoBehaviour
                 }
             }
             newAddedElements.Clear();
-            previousVertices.Clear();
+            
             currVertex.SetColor(new Color(0.6f, 0.6f, 0.6f));
             NoVertexSelected();
             SetLogText(ListToString(vertexQueue, null, "Queue"));
-            yield return new WaitForSeconds(3 / animationSpeed);
+            yield return new WaitForSeconds(2 / animationSpeed);
+            yield return WaitUntilPlaying();
 
             foreach (GraphVertex vertex in previousVertices)
             {
                 vertex.UpdateInfoText();
             }
+            previousVertices.Clear();
         }
         SetLogText(ListToString(vertexQueue, null, "Queue"));
         yield return End();
@@ -601,6 +648,7 @@ public class DirectedGraphController : MonoBehaviour
         stack.Push(sourceVertex);
         GraphVertex previousVertex = null;
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
         while (stack.Count > 0)
         {
             object obj = stack.Pop();
@@ -621,6 +669,7 @@ public class DirectedGraphController : MonoBehaviour
                     }
                     previousVertex = v;
                     yield return new WaitForSeconds(2 / animationSpeed);
+                    yield return WaitUntilPlaying();
                     stack.Push(v);
                     for (int i = v.OutgoingEdges.Count - 1; i >= 0; i--)
                     {
@@ -641,6 +690,7 @@ public class DirectedGraphController : MonoBehaviour
                     }
                     previousVertex = v;
                     yield return new WaitForSeconds(2 / animationSpeed);
+                    yield return WaitUntilPlaying();
                 }
             }
             else
@@ -652,7 +702,7 @@ public class DirectedGraphController : MonoBehaviour
                 {
                     v.SetVariable("pi", e.Source);
                     stack.Push(v);
-                    e.SetColor(new Color(0.6f, 0.6f, 0.6f));
+                    e.SetColor(new Color(0.4f, 0f, 1f));
                 }
                 else if ((int) v.GetVariable("fin.") < 0)
                 {
@@ -666,6 +716,8 @@ public class DirectedGraphController : MonoBehaviour
                 {
                     e.SetColor(new Color(0, 0.8f, 0.4f));
                 }
+                SetVertexSelected(v);
+                yield return new WaitForSeconds(1 / animationSpeed);
             }
         }
         NoVertexSelected();
@@ -681,6 +733,7 @@ public class DirectedGraphController : MonoBehaviour
         List<GraphVertex> topSorted = new List<GraphVertex>();
         List<GraphVertex> newAdditions = new List<GraphVertex>();
         List<GraphVertex> previousVertices = new List<GraphVertex>();
+        Edge previousEdge = null;
         foreach (GraphVertex v in vertices)
         {
             if ((int) v.GetVariable("in.") == 0)
@@ -692,35 +745,50 @@ public class DirectedGraphController : MonoBehaviour
         SetLogText(ListToString(topSorted, newAdditions, "List"));
         newAdditions.Clear();
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
         int index = 0;
         while (index < topSorted.Count)
         {
             GraphVertex v = topSorted[index];
+            v.SetColor(new Color(0.8f, 0.8f, 0.8f));
             SetVertexSelected(v);
             foreach (Edge e in v.OutgoingEdges)
             {
+                e.SetColor(new Color(0.4f, 0, 1));
+                if (previousEdge != null)
+                {
+                    previousEdge.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                }
+                previousEdge = e;
                 GraphVertex destination = e.Destination;
                 destination.SetVariable("in.", (int) destination.GetVariable("in.") - 1);
                 destination.UpdateInfoText();
+                previousVertices.Add(destination);
                 if ((int) destination.GetVariable("in.") == 0)
                 {
                     topSorted.Add(destination);
                     newAdditions.Add(destination);
-                    previousVertices.Add(destination);
                     SetLogText(ListToString(topSorted, newAdditions, "List"));
                 }
-                yield return new WaitForSeconds(1 / animationSpeed);
+                yield return new WaitForSeconds(1.5f / animationSpeed);
             }
             newAdditions.Clear();
-            NoVertexSelected();
             SetLogText(ListToString(topSorted, null, "List"));
             index++;
-            yield return new WaitForSeconds(3 / animationSpeed);
+            if (previousEdge != null)
+            {
+                previousEdge.SetColor(new Color(0.8f, 0.8f, 0.8f));
+            }
+            previousEdge = null;
+            yield return new WaitForSeconds(2.5f / animationSpeed);
+            NoVertexSelected();
 
             foreach (GraphVertex vertex in previousVertices)
             {
                 vertex.UpdateInfoText();
             }
+            previousVertices.Clear();
+            yield return WaitUntilPlaying();
         }
         yield return End();
     }
@@ -728,59 +796,75 @@ public class DirectedGraphController : MonoBehaviour
     public IEnumerator DFSTopSort()
     {
         int time = 1;
-        Stack<GraphVertex> stack = new Stack<GraphVertex>();
+        Stack<object> stack = new Stack<object>();
         List<GraphVertex> topSort = new List<GraphVertex>();
         List<GraphVertex> newAddition = new List<GraphVertex>();
         GraphVertex previousVertex = null;
         SetLogText(ListToString(topSort, null, "List"));
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
         foreach (GraphVertex vertex in vertices)
         {
             stack.Push(vertex);
 
             while (stack.Count > 0)
             {
-                GraphVertex v = stack.Pop();
-                if ((int) v.GetVariable("disc.") < 0)
+                object obj = stack.Pop();
+                if (obj is GraphVertex)
                 {
-                    SetVertexSelected(v);
-                    v.SetVariable("disc.", time);
-                    time++;
-                    v.SetColor(new Color(0.8f, 0.8f, 0.8f));
-                    v.UpdateInfoText();
-                    if (previousVertex != null)
+                    GraphVertex v = (GraphVertex)obj;
+
+                    if ((int)v.GetVariable("disc.") < 0)
                     {
-                        previousVertex.UpdateInfoText();
-                    }
-                    previousVertex = v;
-                    yield return new WaitForSeconds(2 / animationSpeed);
-                    stack.Push(v);
-                    for (int i = v.OutgoingEdges.Count - 1; i >= 0; i--)
-                    {
-                        GraphVertex destination = v.OutgoingEdges[i].Destination;
-                        if ((int) destination.GetVariable("disc.") < 0)
+                        SetVertexSelected(v);
+                        v.SetVariable("disc.", time);
+                        time++;
+                        v.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                        v.UpdateInfoText();
+                        if (previousVertex != null)
                         {
-                            stack.Push(destination);
+                            previousVertex.UpdateInfoText();
+                        }
+                        previousVertex = v;
+                        yield return new WaitForSeconds(2 / animationSpeed);
+                        yield return WaitUntilPlaying();
+                        stack.Push(v);
+                        for (int i = v.OutgoingEdges.Count - 1; i >= 0; i--)
+                        {
+                            stack.Push(v.OutgoingEdges[i]);
                         }
                     }
-                }
-                else if ((int)v.GetVariable("fin.") < 0)
-                {
-                    SetVertexSelected(v);
-                    v.SetVariable("fin.", time);
-                    topSort.Insert(0, v);
-                    newAddition.Add(v);
-                    SetLogText(ListToString(topSort, newAddition, "List"));
-                    newAddition.Clear();
-                    time++;
-                    v.SetColor(new Color(0.6f, 0.6f, 0.6f));
-                    v.UpdateInfoText();
-                    if (previousVertex != null && previousVertex != v)
+                    else if ((int)v.GetVariable("fin.") < 0)
                     {
-                        previousVertex.UpdateInfoText();
+                        SetVertexSelected(v);
+                        v.SetVariable("fin.", time);
+                        topSort.Insert(0, v);
+                        newAddition.Add(v);
+                        SetLogText(ListToString(topSort, newAddition, "List"));
+                        newAddition.Clear();
+                        time++;
+                        v.SetColor(new Color(0.6f, 0.6f, 0.6f));
+                        v.UpdateInfoText();
+                        if (previousVertex != null && previousVertex != v)
+                        {
+                            previousVertex.UpdateInfoText();
+                        }
+                        previousVertex = v;
+                        yield return new WaitForSeconds(2 / animationSpeed);
+                        yield return WaitUntilPlaying();
                     }
-                    previousVertex = v;
-                    yield return new WaitForSeconds(2 / animationSpeed);
+                }
+                else
+                {
+                    Edge e = (Edge)obj;
+                    GraphVertex destination = e.Destination;
+                    if ((int)destination.GetVariable("disc.") < 0)
+                    {
+                        stack.Push(destination);
+                    }
+                    e.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                    SetVertexSelected(destination);
+                    yield return new WaitForSeconds(1 / animationSpeed);
                 }
             }
             SetLogText(ListToString(topSort, null, "List"));
@@ -802,6 +886,7 @@ public class DirectedGraphController : MonoBehaviour
         yield return DFSTopSortSubroutine(topSort);
 
         yield return new WaitForSeconds(1 / animationSpeed);
+        yield return WaitUntilPlaying();
 
         Edge previousEdge = null;
         foreach (Edge e in edges)
@@ -825,7 +910,7 @@ public class DirectedGraphController : MonoBehaviour
 
         yield return new WaitForSeconds(1 / animationSpeed);
 
-        Stack<GraphVertex> stack = new Stack<GraphVertex>();
+        Stack<object> stack = new Stack<object>();
         foreach (GraphVertex v in vertices)
         {
             v.SetVariable("disc.", -1);
@@ -838,6 +923,7 @@ public class DirectedGraphController : MonoBehaviour
         {
             v.UpdateInfoText();
         }
+        yield return WaitUntilPlaying();
         GraphVertex previousVertex = null;
         int time = 1;
 
@@ -854,60 +940,81 @@ public class DirectedGraphController : MonoBehaviour
 
             while (stack.Count > 0)
             {
-                GraphVertex v = stack.Pop();
-                if ((int)v.GetVariable("disc.") < 0)
+                object obj = stack.Pop();
+                if (obj is GraphVertex)
                 {
-                    SetVertexSelected(v);
-                    v.SetVariable("disc.", time);
-                    v.SetVariable("comp.", vertex);
-                    time++;
-                    v.SetColor(new Color(0.8f, 0.8f, 0.8f));
-                    v.UpdateInfoText();
-                    if (previousVertex != null)
+                    GraphVertex v = (GraphVertex)obj;
+                    if ((int)v.GetVariable("disc.") < 0)
                     {
-                        previousVertex.UpdateInfoText();
-                    }
-                    previousVertex = v;
-                    if (currentComponent == "")
-                    {
-                        if (components == "")
+                        SetVertexSelected(v);
+                        v.SetVariable("disc.", time);
+                        v.SetVariable("comp.", vertex);
+                        time++;
+                        v.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                        v.UpdateInfoText();
+                        if (previousVertex != null)
                         {
-                            AddToLogText("<color=#e3d1ffff>" + v.VertexName + "</color>");
+                            previousVertex.UpdateInfoText();
+                        }
+                        previousVertex = v;
+                        if (currentComponent == "")
+                        {
+                            if (components == "")
+                            {
+                                AddToLogText("<color=#e3d1ffff>" + v.VertexName + "</color>");
+                            }
+                            else
+                            {
+                                AddToLogText(", <color=#e3d1ffff>" + v.VertexName + "</color>");
+                            }
                         }
                         else
                         {
-                            AddToLogText(", <color=#e3d1ffff>" + v.VertexName + "</color>");
+                            AddToLogText("<color=#e3d1ffff>" + v.VertexName + "</color>");
                         }
+                        currentComponent += v.VertexName;
+                        yield return new WaitForSeconds(2 / animationSpeed);
+                        yield return WaitUntilPlaying();
+                        stack.Push(v);
+                        for (int i = v.IncomingEdges.Count - 1; i >= 0; i--)
+                        {
+                            stack.Push(v.IncomingEdges[i]);
+                        }
+                    }
+                    else if ((int)v.GetVariable("fin.") < 0)
+                    {
+                        SetVertexSelected(v);
+                        v.SetVariable("fin.", time);
+                        time++;
+                        v.SetColor(new Color(0.6f, 0.6f, 0.6f));
+                        v.UpdateInfoText();
+                        if (previousVertex != null && previousVertex != v)
+                        {
+                            previousVertex.UpdateInfoText();
+                        }
+                        previousVertex = v;
+                        yield return new WaitForSeconds(2 / animationSpeed);
+                        yield return WaitUntilPlaying();
+                    }
+                }
+                else
+                {
+                    Edge e = (Edge)obj;
+                    GraphVertex destination = e.Source;
+                    if ((int)destination.GetVariable("disc.") < 0)
+                    {
+                        stack.Push(destination);
+                    }
+                    if ((int)destination.GetVariable("disc.") < 0 || e.Destination.GetVariable("comp.") == destination.GetVariable("comp."))
+                    {
+                        e.SetColor(new Color(0.4f, 0, 1f));
                     }
                     else
                     {
-                        AddToLogText("<color=#e3d1ffff>" + v.VertexName + "</color>");
+                        e.SetColor(new Color(0.8f, 0.8f, 0.8f));
                     }
-                    currentComponent += v.VertexName;
-                    yield return new WaitForSeconds(2 / animationSpeed);
-                    stack.Push(v);
-                    for (int i = v.IncomingEdges.Count - 1; i >= 0; i--)
-                    {
-                        GraphVertex destination = v.IncomingEdges[i].Source;
-                        if ((int)destination.GetVariable("disc.") < 0)
-                        {
-                            stack.Push(destination);
-                        }
-                    }
-                }
-                else if ((int)v.GetVariable("fin.") < 0)
-                {
-                    SetVertexSelected(v);
-                    v.SetVariable("fin.", time);
-                    time++;
-                    v.SetColor(new Color(0.6f, 0.6f, 0.6f));
-                    v.UpdateInfoText();
-                    if (previousVertex != null && previousVertex != v)
-                    {
-                        previousVertex.UpdateInfoText();
-                    }
-                    previousVertex = v;
-                    yield return new WaitForSeconds(2 / animationSpeed);
+                    SetVertexSelected(destination);
+                    yield return new WaitForSeconds(1 / animationSpeed);
                 }
             }
             if (currentComponent != "")
@@ -941,58 +1048,74 @@ public class DirectedGraphController : MonoBehaviour
     public IEnumerator DFSTopSortSubroutine(List<GraphVertex> topSort)
     {
         int time = 1;
-        Stack<GraphVertex> stack = new Stack<GraphVertex>();
+        Stack<object> stack = new Stack<object>();
         List<GraphVertex> newAddition = new List<GraphVertex>();
         GraphVertex previousVertex = null;
         SetLogText(ListToString(topSort, null, "List"));
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
+
         foreach (GraphVertex vertex in vertices)
         {
             stack.Push(vertex);
 
             while (stack.Count > 0)
             {
-                GraphVertex v = stack.Pop();
-                if ((int)v.GetVariable("disc.") < 0)
+                object obj = stack.Pop();
+                if (obj is GraphVertex)
                 {
-                    SetVertexSelected(v);
-                    v.SetVariable("disc.", time);
-                    time++;
-                    v.SetColor(new Color(0.8f, 0.8f, 0.8f));
-                    v.UpdateInfoText();
-                    if (previousVertex != null)
+                    GraphVertex v = (GraphVertex)obj;
+                    if ((int)v.GetVariable("disc.") < 0)
                     {
-                        previousVertex.UpdateInfoText();
-                    }
-                    previousVertex = v;
-                    yield return new WaitForSeconds(2 / animationSpeed);
-                    stack.Push(v);
-                    for (int i = v.OutgoingEdges.Count - 1; i >= 0; i--)
-                    {
-                        GraphVertex destination = v.OutgoingEdges[i].Destination;
-                        if ((int)destination.GetVariable("disc.") < 0)
+                        SetVertexSelected(v);
+                        v.SetVariable("disc.", time);
+                        time++;
+                        v.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                        v.UpdateInfoText();
+                        if (previousVertex != null)
                         {
-                            stack.Push(destination);
+                            previousVertex.UpdateInfoText();
+                        }
+                        previousVertex = v;
+                        yield return new WaitForSeconds(2 / animationSpeed);
+                        yield return WaitUntilPlaying();
+                        stack.Push(v);
+                        for (int i = v.OutgoingEdges.Count - 1; i >= 0; i--)
+                        {
+                            stack.Push(v.OutgoingEdges[i]);
                         }
                     }
-                }
-                else if ((int)v.GetVariable("fin.") < 0)
-                {
-                    SetVertexSelected(v);
-                    v.SetVariable("fin.", time);
-                    topSort.Insert(0, v);
-                    newAddition.Add(v);
-                    SetLogText(ListToString(topSort, newAddition, "List"));
-                    newAddition.Clear();
-                    time++;
-                    v.SetColor(new Color(0.6f, 0.6f, 0.6f));
-                    v.UpdateInfoText();
-                    if (previousVertex != null && previousVertex != v)
+                    else if ((int)v.GetVariable("fin.") < 0)
                     {
-                        previousVertex.UpdateInfoText();
+                        SetVertexSelected(v);
+                        v.SetVariable("fin.", time);
+                        topSort.Insert(0, v);
+                        newAddition.Add(v);
+                        SetLogText(ListToString(topSort, newAddition, "List"));
+                        newAddition.Clear();
+                        time++;
+                        v.SetColor(new Color(0.6f, 0.6f, 0.6f));
+                        v.UpdateInfoText();
+                        if (previousVertex != null && previousVertex != v)
+                        {
+                            previousVertex.UpdateInfoText();
+                        }
+                        previousVertex = v;
+                        yield return new WaitForSeconds(2 / animationSpeed);
+                        yield return WaitUntilPlaying();
                     }
-                    previousVertex = v;
-                    yield return new WaitForSeconds(2 / animationSpeed);
+                }
+                else
+                {
+                    Edge e = (Edge)obj;
+                    GraphVertex destination = e.Destination;
+                    if ((int)destination.GetVariable("disc.") < 0)
+                    {
+                        stack.Push(destination);
+                    }
+                    e.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                    SetVertexSelected(destination);
+                    yield return new WaitForSeconds(1 / animationSpeed);
                 }
             }
             SetLogText(ListToString(topSort, null, "List"));
@@ -1013,36 +1136,54 @@ public class DirectedGraphController : MonoBehaviour
         List<Edge> currentEdge = new List<Edge>();
         SetLogText("0/" + (vertices.Count - 1) + " | " + ListToString(edges, null, "Edges"));
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
         for (int i = 1; i < vertices.Count; i++)
         {
             foreach (Edge e in edges)
             {
                 currentEdge.Add(e);
                 SetLogText(i + "/" + (vertices.Count - 1) + " | " + ListToString(edges, currentEdge, "Edges"));
-                e.SetColor(new Color(0.4f, 0, 1));
+                RelaxEdge(e);
                 if (previousEdge != null)
                 {
-                    previousEdge.SetColor(Color.white);
+                    if (previousEdge.Source != (GraphVertex)previousEdge.Destination.GetVariable("pi"))
+                    {
+                        previousEdge.SetColor(Color.white);
+                    }
+                    else
+                    {
+                        previousEdge.SetColor(new Color(0.2f, 0, 0.5f));
+                    }
                 }
                 previousEdge = e;
-                RelaxEdge(e);
+                e.SetColor(new Color(0.4f, 0, 1));
                 if (previousVertex != null)
                 {
                     previousVertex.UpdateInfoText();
                 }
                 previousVertex = e.Destination;
                 yield return new WaitForSeconds(2 / animationSpeed);
+                yield return WaitUntilPlaying();
                 currentEdge.Clear();
             }
             SetLogText(i + "/" + (vertices.Count - 1) + " | " + ListToString(edges, null, "Edges"));
             if (previousEdge != null)
             {
-                previousEdge.SetColor(Color.white);
+                if (previousEdge.Source != (GraphVertex)previousEdge.Destination.GetVariable("pi"))
+                {
+                    previousEdge.SetColor(Color.white);
+                }
+                else
+                {
+                    previousEdge.SetColor(new Color(0.2f, 0, 0.5f));
+                }
             }
+            previousEdge = null;
             if (previousVertex != null)
             {
                 previousVertex.UpdateInfoText();
             }
+            previousVertex = null;
             yield return new WaitForSeconds(2 / animationSpeed);
         }
         yield return End();
@@ -1060,6 +1201,7 @@ public class DirectedGraphController : MonoBehaviour
         }
         SetLogText(PriorityQueueToString(priorityQueue, null, "P.Queue"));
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
 
         while (priorityQueue.Count > 0)
         {
@@ -1070,12 +1212,19 @@ public class DirectedGraphController : MonoBehaviour
             foreach (Edge e in v.OutgoingEdges)
             {
                 RelaxEdge(e);
-                e.SetColor(new Color(0.4f, 0, 1));
                 if (previousEdge != null)
                 {
-                    previousEdge.SetColor(Color.white);
+                    if (previousEdge.Source != (GraphVertex)previousEdge.Destination.GetVariable("pi"))
+                    {
+                        previousEdge.SetColor(Color.white);
+                    }
+                    else
+                    {
+                        previousEdge.SetColor(new Color(0.2f, 0, 0.5f));
+                    }
                 }
                 previousEdge = e;
+                e.SetColor(new Color(0.4f, 0, 1));
                 GraphVertex destination = e.Destination;
                 if (previousVertex != null)
                 {
@@ -1095,7 +1244,14 @@ public class DirectedGraphController : MonoBehaviour
             SetLogText(PriorityQueueToString(priorityQueue, null, "P.Queue"));
             if (previousEdge != null)
             {
-                previousEdge.SetColor(Color.white);
+                if (previousEdge.Source != (GraphVertex)previousEdge.Destination.GetVariable("pi"))
+                {
+                    previousEdge.SetColor(Color.white);
+                }
+                else
+                {
+                    previousEdge.SetColor(new Color(0.2f, 0, 0.5f));
+                }
             }
             previousEdge = null;
             if (previousVertex != null)
@@ -1104,6 +1260,7 @@ public class DirectedGraphController : MonoBehaviour
             }
             previousVertex = null;
             yield return new WaitForSeconds(1 / animationSpeed);
+            yield return WaitUntilPlaying();
         }
 
         yield return End();
@@ -1159,6 +1316,10 @@ public class DirectedGraphController : MonoBehaviour
         yield return DFSTopSortSubroutine(topSort);
 
         yield return new WaitForSeconds(1 / animationSpeed);
+        foreach (Edge e in edges)
+        {
+            e.SetColor(Color.white);
+        }
 
         foreach (GraphVertex v in vertices)
         {
@@ -1189,12 +1350,19 @@ public class DirectedGraphController : MonoBehaviour
             foreach (Edge e in v.OutgoingEdges)
             {
                 RelaxEdge(e);
-                e.SetColor(new Color(0.4f, 0, 1));
                 if (previousEdge != null)
                 {
-                    previousEdge.SetColor(Color.white);
+                    if (previousEdge.Source != (GraphVertex)previousEdge.Destination.GetVariable("pi"))
+                    {
+                        previousEdge.SetColor(Color.white);
+                    }
+                    else
+                    {
+                        previousEdge.SetColor(new Color(0.2f, 0, 0.5f));
+                    }
                 }
                 previousEdge = e;
+                e.SetColor(new Color(0.4f, 0, 1));
                 GraphVertex destination = e.Destination;
                 if (previousVertex != null)
                 {
@@ -1207,7 +1375,14 @@ public class DirectedGraphController : MonoBehaviour
             SetLogText(ListToString(topSort, null, "L"));
             if (previousEdge != null)
             {
-                previousEdge.SetColor(Color.white);
+                if (previousEdge.Source != (GraphVertex)previousEdge.Destination.GetVariable("pi"))
+                {
+                    previousEdge.SetColor(Color.white);
+                }
+                else
+                {
+                    previousEdge.SetColor(new Color(0.2f, 0, 0.5f));
+                }
             }
             previousEdge = null;
             if (previousVertex != null)
@@ -1216,6 +1391,7 @@ public class DirectedGraphController : MonoBehaviour
             }
             previousVertex = null;
             yield return new WaitForSeconds(1 / animationSpeed);
+            yield return WaitUntilPlaying();
         }
 
         yield return End();
@@ -1259,7 +1435,18 @@ public class DirectedGraphController : MonoBehaviour
         {
             destination.SetVariable("d", (float) source.GetVariable("d") + e.Weight);
             destination.SetVariable("pi", source);
+            if (destination.GetVariable("pi") != null)
+            {
+                foreach (Edge edge in destination.IncomingEdges)
+                {
+                    if (edge.Source != (GraphVertex)destination.GetVariable("pi"))
+                    {
+                        edge.SetColor(Color.white);
+                    }
+                }
+            }
             destination.UpdateInfoText();
+            e.SetColor(new Color(0.2f, 0, 0.5f));
         }
     }
 

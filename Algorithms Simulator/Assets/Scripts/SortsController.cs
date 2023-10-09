@@ -36,6 +36,8 @@ public class SortsController : MonoBehaviour
     private bool selectingPhase = false;
     private bool running = false;
     private float animationSpeed = 1;
+    private bool paused;
+    private bool stepping;
 
     private List<ListElement> elements = new List<ListElement>();
     private HashSet<ListElement> nonIntegerElements = new HashSet<ListElement>();
@@ -54,8 +56,11 @@ public class SortsController : MonoBehaviour
     [SerializeField] private GameObject elementSelected2;
     [SerializeField] private GameObject insertInput;
     [SerializeField] private GameObject parameterText;
+    [SerializeField] private GameObject pause;
+    [SerializeField] private GameObject step;
+    [SerializeField] private GameObject pauseText;
 
-    [SerializeField] private List<GameObject> nonNegativeAlgs = new List<GameObject>();
+    [SerializeField] private List<GameObject> nonFloatAlgs = new List<GameObject>();
 
     private ListElement sourceElement;
     private string currentAlg;
@@ -127,6 +132,24 @@ public class SortsController : MonoBehaviour
         frozen = false;
     }
 
+    public void Pause()
+    {
+        if (paused)
+        {
+            paused = false;
+            step.GetComponent<UnityEngine.UI.Button>().interactable = false;
+        }
+        else
+        {
+            paused = true;
+        }
+    }
+
+    public void Step()
+    {
+        stepping = true;
+    }
+
     public void SelectElement()
     {
         if (Input.GetMouseButtonDown(0))
@@ -156,7 +179,7 @@ public class SortsController : MonoBehaviour
     {
         algMenu.SetActive(true);
         defaultUI.SetActive(false);
-        foreach (GameObject button in nonNegativeAlgs)
+        foreach (GameObject button in nonFloatAlgs)
         {
             button.GetComponent<UnityEngine.UI.Button>().interactable = (nonIntegerElements.Count == 0);
         }
@@ -168,8 +191,12 @@ public class SortsController : MonoBehaviour
         currentAlg = s;
         defaultUI.SetActive(false);
         algMenu.SetActive(false);
-        switch(currentAlg)
+        switch (currentAlg)
         {
+            case "Randomize":
+                Randomize();
+                defaultUI.SetActive(true);
+                break;
             case "Add":
                 parameterText.GetComponent<TMP_Text>().text = "Insert an element:";
                 insertInput.GetComponent<TMP_InputField>().text = "";
@@ -236,7 +263,7 @@ public class SortsController : MonoBehaviour
             sourceElement = null;
             currentAlg = null;
             selectingPhase = false;
-            sourceText.SetActive(false);            
+            sourceText.SetActive(false);
         }
         else if (addUI.activeSelf)
         {
@@ -286,7 +313,12 @@ public class SortsController : MonoBehaviour
             e.SetColor(Color.white);
             e.SetMovement(Vector3.zero);
         }
+        paused = false;
+        stepping = false;
+        pause.GetComponent<UnityEngine.UI.Button>().interactable = true;
+        step.GetComponent<UnityEngine.UI.Button>().interactable = false;
         runtimeUI.SetActive(true);
+        pauseText.SetActive(false);
         SetLogText("");
 
         switch (currentAlg)
@@ -362,7 +394,7 @@ public class SortsController : MonoBehaviour
             elements.Add(e);
             e.SetValue(newWeight);
         }
-        if (e.ElementValue != (int) e.ElementValue)
+        if (e.ElementValue != (int)e.ElementValue)
         {
             AddNonIntegerElement(e);
         }
@@ -370,6 +402,30 @@ public class SortsController : MonoBehaviour
         selectingPhase = false;
         currentAlg = null;
         defaultUI.SetActive(true);
+    }
+
+    public void Randomize()
+    {
+        foreach (ListElement e in elements)
+        {
+            e.Destroy();
+        }
+        elements = new List<ListElement>();
+        Vector3 position = ScreenCamera.transform.position - new Vector3(9, 0);
+        baseX = position.x;
+        baseY = position.y;
+        position.z = 0;
+        for (int i = 0; i < 10; i++)
+        {
+            ListElement e = Instantiate(Resources.Load<GameObject>("Prefabs/ListElement"), position, Quaternion.identity, GameObject.Find("Elements").transform).GetComponent<ListElement>();
+            elements.Add(e);
+            e.SetValue(Random.Range(0, 100));
+            position += new Vector3(2, 0);
+        }
+        if (ScreenCamera.orthographicSize < 6)
+        {
+            ScreenCamera.orthographicSize = 6;
+        }
     }
 
     public void BucketParam(string s)
@@ -386,7 +442,7 @@ public class SortsController : MonoBehaviour
         Unfreeze();
         RunAlgorithm();
     }
-    
+
     public void SelectParam(string s)
     {
         int value;
@@ -445,6 +501,19 @@ public class SortsController : MonoBehaviour
         sourceElement = null;
     }
 
+    public IEnumerator WaitUntilPlaying()
+    {
+        if (paused && !stepping)
+        {
+            step.GetComponent<UnityEngine.UI.Button>().interactable = true;
+            pauseText.SetActive(true);
+        }
+        yield return new WaitUntil(() => stepping | !paused);
+        stepping = false;
+        pauseText.SetActive(false);
+        step.GetComponent<UnityEngine.UI.Button>().interactable = false;
+    }
+
     public IEnumerator TMerge()
     {
         SetLogText("");
@@ -455,6 +524,7 @@ public class SortsController : MonoBehaviour
         GameObject rightDivider = Instantiate(Resources.Load<GameObject>("Prefabs/Divider"), new Vector3(baseX - 1 + (2 * elements.Count), baseY), Quaternion.identity, GameObject.Find("Other").transform);
         Stack<(int, int, bool)> stack = new Stack<(int, int, bool)>();
         stack.Push((0, elements.Count - 1, false));
+        yield return WaitUntilPlaying();
         while (stack.Count > 0)
         {
             (int, int, bool) tuple = stack.Pop();
@@ -467,6 +537,7 @@ public class SortsController : MonoBehaviour
                 int rightBound = tuple.Item2 + 1;
                 SetLogText("Merging " + ListToString(elements, leftIndex, leftBound - 1) + " and " + ListToString(elements, rightIndex, rightBound - 1));
                 yield return new WaitForSeconds(2.5f / animationSpeed);
+                yield return WaitUntilPlaying();
                 ListElement[] tempElements = new ListElement[rightBound - tuple.Item1];
                 int tempElementIndex = 0;
                 int offset = tuple.Item1;
@@ -492,6 +563,7 @@ public class SortsController : MonoBehaviour
                     yield return new WaitForSeconds(1 / animationSpeed);
                     tempElementIndex++;
                     Unselect();
+                    yield return WaitUntilPlaying();
                 }
                 while (leftIndex < leftBound)
                 {
@@ -526,6 +598,7 @@ public class SortsController : MonoBehaviour
                 Destroy(dividers[mid]);
                 dividers[mid] = null;
                 yield return new WaitForSeconds(1 / animationSpeed);
+                yield return WaitUntilPlaying();
             }
             else
             {
@@ -543,6 +616,7 @@ public class SortsController : MonoBehaviour
                 stack.Push((mid + 1, tuple.Item2, false));
                 stack.Push((tuple.Item1, mid, false));
                 yield return new WaitForSeconds(1.5f / animationSpeed);
+                yield return WaitUntilPlaying();
             }
         }
         Destroy(leftDivider);
@@ -558,6 +632,7 @@ public class SortsController : MonoBehaviour
         yield return new WaitForSeconds(3 / animationSpeed);
 
         int iterations = Mathf.CeilToInt(Mathf.Log(elements.Count, 2));
+        yield return WaitUntilPlaying();
         for (int i = 0; i < iterations; i++)
         {
             for (int j = 0; j < elements.Count; j += (int) Mathf.Pow(2, i + 1))
@@ -579,6 +654,7 @@ public class SortsController : MonoBehaviour
                 GameObject rightDivider = Instantiate(Resources.Load<GameObject>("Prefabs/Divider"), new Vector3(baseX - 1 + (2 * rightBound), baseY), Quaternion.identity, GameObject.Find("Other").transform);
                 SetLogText("Merging " + ListToString(elements, leftIndex, leftBound - 1) + " and " + ListToString(elements, rightIndex, rightBound - 1));
                 yield return new WaitForSeconds(2.5f / animationSpeed);
+                yield return WaitUntilPlaying();
                 ListElement[] tempElements = new ListElement[rightBound - j];
                 int tempElementIndex = 0;
                 int offset = j;
@@ -604,6 +680,7 @@ public class SortsController : MonoBehaviour
                     yield return new WaitForSeconds(1 / animationSpeed);
                     tempElementIndex++;
                     Unselect();
+                    yield return WaitUntilPlaying();
                 }
                 while (leftIndex < leftBound)
                 {
@@ -639,6 +716,7 @@ public class SortsController : MonoBehaviour
                 Destroy(centerDivider);
                 Destroy(rightDivider);
                 yield return new WaitForSeconds(1 / animationSpeed);
+                yield return WaitUntilPlaying();
             }
         }
         Unselect();
@@ -650,6 +728,7 @@ public class SortsController : MonoBehaviour
     {
         SetLogText("");
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
 
         Stack<(int, int)> stack = new Stack<(int, int)>();
         stack.Push((0, elements.Count - 1));
@@ -672,6 +751,7 @@ public class SortsController : MonoBehaviour
             SetLogText("Partitioning: " + ListToString(elements, tuple.Item1, tuple.Item2 - 1) + " | Pivot: " + pivot.ToString());
             SelectOne(pivot);
             yield return new WaitForSeconds(2 / animationSpeed);
+            yield return WaitUntilPlaying();
             for (int i = tuple.Item1; i < tuple.Item2; i++)
             {
                 SetLogText("Comparing: " + elements[i].ToString() + " v. " + pivot.ToString());
@@ -688,6 +768,7 @@ public class SortsController : MonoBehaviour
                     elements[i].SetColor(new Color(0.9f, 1f, 0.9f));
                 }
                 yield return new WaitForSeconds(1f / animationSpeed);
+                yield return WaitUntilPlaying();
             }
             SetLogText("Partitioning: " + ListToString(elements, tuple.Item1, tuple.Item2 - 1) + " | Pivot: " + pivot.ToString());
             UnselectTwo();
@@ -720,6 +801,7 @@ public class SortsController : MonoBehaviour
             UnselectOne();
             SetLogText("");
             yield return new WaitForSeconds(1 / animationSpeed);
+            yield return WaitUntilPlaying();
         }
         Unselect();
         SetLogText("<size=15>Comparisons: " + ListToString(comparisons, 0, comparisons.Count - 1) + "</size>");
@@ -753,6 +835,7 @@ public class SortsController : MonoBehaviour
         }
 
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
 
         for (int i = 0; i < elements.Count; i++)
         {
@@ -771,6 +854,7 @@ public class SortsController : MonoBehaviour
             element.UpdateInfoText(text, true);
             SetLogText($"Count {(int) elements[i].ElementValue}");
             yield return new WaitForSeconds(1 / animationSpeed);
+            yield return WaitUntilPlaying();
         }
         if (prevArrayElement != null)
         {
@@ -798,6 +882,7 @@ public class SortsController : MonoBehaviour
             element.UpdateInfoText(text, true);
             SetLogText($"C[{i}] = C[{i}] + C[{i-1}]");
             yield return new WaitForSeconds(1 / animationSpeed);
+            yield return WaitUntilPlaying();
         }
         if (prevArrayElement != null)
         {
@@ -833,6 +918,7 @@ public class SortsController : MonoBehaviour
             yield return new WaitForSeconds(1 / animationSpeed);
             Unselect();
             yield return new WaitForSeconds(1 / animationSpeed);
+            yield return WaitUntilPlaying();
         }
         SetLogText("");
         if (prevArrayElement != null)
@@ -898,7 +984,8 @@ public class SortsController : MonoBehaviour
             indices.Add(indexText);
         }
 
-        yield return new WaitForSeconds(1 / animationSpeed);
+        yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
 
         int iterations = 0;
         if (minMax.Item2.ElementValue > 0)
@@ -909,7 +996,6 @@ public class SortsController : MonoBehaviour
         for (int digit = 1; digit <= (int)Mathf.Pow(10, iterations); digit *= 10)
         {
             SetLogText($"Counting sort using {digit}'s digit");
-            Debug.Log(digit);
             for (int i = 0; i < runtimeArray.Count; i++)
             {
                 runtimeArray[i].SetVariable("val", 0);
@@ -917,6 +1003,7 @@ public class SortsController : MonoBehaviour
                 runtimeArray[i].UpdateInfoText(text, false);
             }
             yield return new WaitForSeconds(2 / animationSpeed);
+            yield return WaitUntilPlaying();
             //count
             for (int i = 0; i < elements.Count; i++)
             {
@@ -945,6 +1032,7 @@ public class SortsController : MonoBehaviour
             SetLogText($"Counting sort using {digit}'s digit");
             Unselect();
             yield return new WaitForSeconds(1.5f / animationSpeed);
+            yield return WaitUntilPlaying();
 
             //update count array
             for (int i = 1; i < runtimeArray.Count; i++)
@@ -973,6 +1061,7 @@ public class SortsController : MonoBehaviour
             SetLogText($"Counting sort using {digit}'s digit");
             Unselect();
             yield return new WaitForSeconds(1.5f / animationSpeed);
+            yield return WaitUntilPlaying();
 
             //sort
             ListElement[] newList = new ListElement[elements.Count];
@@ -1013,6 +1102,7 @@ public class SortsController : MonoBehaviour
             }
             yield return DragUp(0, elements.Count - 1);
             yield return new WaitForSeconds(2f / animationSpeed);
+            yield return WaitUntilPlaying();
         }
 
         if (modifier > 0)
@@ -1062,6 +1152,7 @@ public class SortsController : MonoBehaviour
         }
 
         yield return new WaitForSeconds(3f / animationSpeed);
+        yield return WaitUntilPlaying();
 
         foreach (ListElement element in elements)
         {
@@ -1077,6 +1168,7 @@ public class SortsController : MonoBehaviour
             SetLogText(element.ElementValue.ToString() + " -> Bucket " + ((float)buckets[bucket].GetVariable("min")).ToString() + " - " + ((float)buckets[bucket].GetVariable("max")).ToString());
             yield return Move(new Vector3(buckets[bucket].transform.position.x, buckets[bucket].transform.position.y - (2 * elementsInBuckets[bucket].Count)), element, true);
             yield return new WaitForSeconds(1f / animationSpeed);
+            yield return WaitUntilPlaying();
         }
         SetLogText("");
         Unselect();
@@ -1100,6 +1192,7 @@ public class SortsController : MonoBehaviour
                     yield return Swap(bucketList[j - 1], bucketList[j]);
                     j--;
                     yield return new WaitForSeconds(1f / animationSpeed);
+                    yield return WaitUntilPlaying();
                 }
             }
         }
@@ -1122,6 +1215,7 @@ public class SortsController : MonoBehaviour
                 yield return LineUp(bucketList, x);
                 x += 2f * bucketList.Count;
                 yield return new WaitForSeconds(2f / animationSpeed);
+                yield return WaitUntilPlaying();
             }
         }
 
@@ -1138,6 +1232,7 @@ public class SortsController : MonoBehaviour
     {
         SetLogText("");
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
 
         Stack<(int, int)> stack = new Stack<(int, int)>();
         stack.Push((0, elements.Count - 1));
@@ -1166,6 +1261,7 @@ public class SortsController : MonoBehaviour
             SetLogText("Partitioning: " + ListToString(elements, tuple.Item1, tuple.Item2 - 1) + " | Pivot: " + pivot.ToString());
             SelectOne(pivot);
             yield return new WaitForSeconds(2 / animationSpeed);
+            yield return WaitUntilPlaying();
             for (int i = tuple.Item1; i < tuple.Item2; i++)
             {
                 SetLogText("Comparing: " + elements[i].ToString() + " v. " + pivot.ToString());
@@ -1182,6 +1278,7 @@ public class SortsController : MonoBehaviour
                     elements[i].SetColor(new Color(0.9f, 1f, 0.9f));
                 }
                 yield return new WaitForSeconds(1f / animationSpeed);
+                yield return WaitUntilPlaying();
             }
             SetLogText("Partitioning: " + ListToString(elements, tuple.Item1, tuple.Item2 - 1) + " | Pivot: " + pivot.ToString());
             UnselectTwo();
@@ -1231,6 +1328,7 @@ public class SortsController : MonoBehaviour
             UnselectOne();
             SetLogText("");
             yield return new WaitForSeconds(1 / animationSpeed);
+            yield return WaitUntilPlaying();
         }
         yield return End();
         Unselect();
@@ -1240,6 +1338,7 @@ public class SortsController : MonoBehaviour
     {
         SetLogText("");
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
 
         for (int i = 1; i < elements.Count; i++)
         {
@@ -1259,6 +1358,7 @@ public class SortsController : MonoBehaviour
                 yield return Swap(elements[j], elements[j-1]);
                 j--;
                 yield return new WaitForSeconds(2f / animationSpeed);
+                yield return WaitUntilPlaying();
                 if (j > 0)
                 {
                     UnselectOne();
@@ -1268,6 +1368,7 @@ public class SortsController : MonoBehaviour
                     yield return new WaitForSeconds(2f / animationSpeed);
                 }
             }
+            yield return WaitUntilPlaying();
         }
         Unselect();
         SetLogText("<size=15>Comparisons: " + ListToString(comparisons, 0, comparisons.Count - 1) + "</size>");

@@ -57,6 +57,8 @@ public class HeapController : MonoBehaviour
     private float selectedTime = float.MinValue;
     private Vector3 prevMousePosition;
     private float animationSpeed = 1;
+    private bool paused;
+    private bool stepping;
 
     private List<HeapElement> elements = new List<HeapElement>();
 
@@ -79,6 +81,9 @@ public class HeapController : MonoBehaviour
     [SerializeField] private GameObject elementSelected2;
     [SerializeField] private GameObject insertInput;
     [SerializeField] private GameObject heapSortButton;
+    [SerializeField] private GameObject pause;
+    [SerializeField] private GameObject step;
+    [SerializeField] private GameObject pauseText;
 
     private HeapElement sourceElement;
     private string currentAlg;
@@ -150,6 +155,24 @@ public class HeapController : MonoBehaviour
     public void Unfreeze()
     {
         frozen = false;
+    }
+
+    public void Pause()
+    {
+        if (paused)
+        {
+            paused = false;
+            step.GetComponent<UnityEngine.UI.Button>().interactable = false;
+        }
+        else
+        {
+            paused = true;
+        }
+    }
+
+    public void Step()
+    {
+        stepping = true;
     }
 
     public void SetMax()
@@ -304,7 +327,7 @@ public class HeapController : MonoBehaviour
 
     public void ChangeAnimationSpeed(float f)
     {
-        animationSpeed = f;
+        animationSpeed = Mathf.Pow(2, f);
     }
 
     public void RunAlgorithm()
@@ -327,6 +350,11 @@ public class HeapController : MonoBehaviour
             }
         }
         runtimeUI.SetActive(true);
+        paused = false;
+        stepping = false;
+        pauseText.SetActive(false);
+        pause.GetComponent<UnityEngine.UI.Button>().interactable = true;
+        step.GetComponent<UnityEngine.UI.Button>().interactable = false;
         SetLogText("");
 
         switch (currentAlg)
@@ -399,6 +427,11 @@ public class HeapController : MonoBehaviour
                     e.HeapElementConnector.SetColor(Color.white);
                 }
             }
+            paused = false;
+            stepping = false;
+            pauseText.SetActive(false);
+            pause.GetComponent<UnityEngine.UI.Button>().interactable = true;
+            step.GetComponent<UnityEngine.UI.Button>().interactable = false;
             runtimeUI.SetActive(true);
             StartCoroutine(InsertBubbleUp());
         }
@@ -470,6 +503,19 @@ public class HeapController : MonoBehaviour
         sourceElement = null;
     }
 
+    public IEnumerator WaitUntilPlaying()
+    {
+        if (paused && !stepping)
+        {
+            step.GetComponent<UnityEngine.UI.Button>().interactable = true;
+            pauseText.SetActive(true);
+        }
+        yield return new WaitUntil(() => stepping | !paused);
+        stepping = false;
+        pauseText.SetActive(false);
+        step.GetComponent<UnityEngine.UI.Button>().interactable = false;
+    }
+
     public void SwapValues(HeapElement one, HeapElement two)
     {
         float temp = one.ElementValue;
@@ -487,6 +533,7 @@ public class HeapController : MonoBehaviour
         SetLogText("");
         
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
 
         int currIndex = elements.Count - 1;
         while (currIndex > 0)
@@ -511,6 +558,7 @@ public class HeapController : MonoBehaviour
                 SetLogText("Swapped: " + parent.ElementValue + ", " + child.ElementValue);
 
                 yield return new WaitForSeconds(2 / animationSpeed);
+                yield return WaitUntilPlaying();
             }
             else
             {
@@ -534,6 +582,9 @@ public class HeapController : MonoBehaviour
             EndAlgorithm();
             yield break;
         }
+        yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
+
         List<HeapElement> highlights = new List<HeapElement>();
         if (elements.Count > 1)
         {
@@ -563,6 +614,7 @@ public class HeapController : MonoBehaviour
         highlights.Clear();
 
         yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
 
         UnselectOne();
         HeapElement last = elements[elements.Count - 1];
@@ -582,6 +634,7 @@ public class HeapController : MonoBehaviour
         last.Destroy();
         UpdateHeapAsArray(null);
         yield return new WaitForSeconds(2 / animationSpeed);
+        yield return WaitUntilPlaying();
 
         yield return HeapifyHelper(0, elements.Count);
 
@@ -603,7 +656,8 @@ public class HeapController : MonoBehaviour
             yield return End();
             yield break;
         }
-
+        yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
         yield return HeapifyHelper(index, elements.Count);
 
         Unselect();
@@ -614,6 +668,8 @@ public class HeapController : MonoBehaviour
 
     public IEnumerator BuildHeap()
     {
+        yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
         yield return BuildHeapHelper();
 
         Unselect();
@@ -624,6 +680,8 @@ public class HeapController : MonoBehaviour
 
     public IEnumerator HeapSort()
     {
+        yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
         yield return BuildHeapHelper();
 
         string buildHeapComparisons = ComparisonsToString();
@@ -657,7 +715,6 @@ public class HeapController : MonoBehaviour
 
                 SwapValues(top, lastElement);
                 SetLogText("Swapped: " + lastElement.ElementValue + ", " + top.ElementValue);
-
                 UpdateHeapAsArray(highlights);
             }
             else
@@ -669,6 +726,7 @@ public class HeapController : MonoBehaviour
             highlights.Clear();
 
             yield return new WaitForSeconds(3 / animationSpeed);
+            yield return WaitUntilPlaying();
 
             UnselectOne();
             HeapElement last = elements[arrayCount - 1];
@@ -679,6 +737,7 @@ public class HeapController : MonoBehaviour
             last.SetColor(new Color(0.6f, 0.6f, 0.6f));
             highlights.Clear();
             yield return new WaitForSeconds(2 / animationSpeed);
+            yield return WaitUntilPlaying();
 
             arrayCount--;
 
@@ -686,6 +745,7 @@ public class HeapController : MonoBehaviour
             Unselect();
             UpdateHeapAsArray(null);
             yield return new WaitForSeconds(1 / animationSpeed);
+            yield return WaitUntilPlaying();
         }
 
         Unselect();
@@ -754,6 +814,7 @@ public class HeapController : MonoBehaviour
                     SetLogText("Swapped: " + one.ElementValue + ", " + two.ElementValue);
 
                     yield return new WaitForSeconds(2 / animationSpeed);
+                    yield return WaitUntilPlaying();
 
 
                 }
@@ -765,6 +826,7 @@ public class HeapController : MonoBehaviour
                     SetLogText("Swapped: " + one.ElementValue + ", " + two.ElementValue);
 
                     yield return new WaitForSeconds(2 / animationSpeed);
+                    yield return WaitUntilPlaying();
 
                     currIndex = currIndex * 2 + 1;
                 }
@@ -791,6 +853,7 @@ public class HeapController : MonoBehaviour
                         SetLogText("Swapped: " + one.ElementValue + ", " + two.ElementValue);
 
                         yield return new WaitForSeconds(2 / animationSpeed);
+                        yield return WaitUntilPlaying();
 
                         currIndex = currIndex * 2 + 2;
                     }
@@ -822,6 +885,7 @@ public class HeapController : MonoBehaviour
             SelectOne(elements[currIndex]);
             SetLogText("MaxHeapify on " + elements[currIndex].ElementValue);
             yield return new WaitForSeconds(2 / animationSpeed);
+            yield return WaitUntilPlaying();
 
             yield return HeapifyHelper(currIndex, elements.Count);
 

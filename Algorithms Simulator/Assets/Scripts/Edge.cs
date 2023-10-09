@@ -57,11 +57,19 @@ public class Edge : MonoBehaviour
         }
     }
 
+    public Color EdgeColor
+    {
+        get
+        {
+            return GetComponent<SpriteRenderer>().color;
+        }
+    }
+
     [SerializeField] private bool directed;
     // Start is called before the first frame update
     void Start()
     {
-        weightInput = Instantiate(Resources.Load<GameObject>("Prefabs/EdgeText"), transform.position, Quaternion.identity, GameObject.Find("UIWorld").transform).GetComponent<EdgeText>();
+        weightInput = Instantiate(Resources.Load<GameObject>("Prefabs/EdgeText"), transform.position + new Vector3(0, 0.2f), Quaternion.identity, GameObject.Find("UIWorld").transform).GetComponent<EdgeText>();
         if (!DirectedGraphController.DirGraphController.Weighted)
         {
             HideWeight();
@@ -143,7 +151,8 @@ public class Edge : MonoBehaviour
                 transform.localScale = new Vector3(scale, 1, 1);
                 GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/directededge");
                 GetComponent<BoxCollider2D>().size = new Vector2(5, 0.2f);
-                GetComponent<BoxCollider2D>().offset = Vector2.zero;
+                GetComponent<BoxCollider2D>().offset = new Vector2(0, 0.2f); //curved edge; straight edge should be 0
+                weightInput.transform.position = transform.position + (transform.rotation * new Vector2(0, 0.2f));
             }
         }
         else
@@ -156,9 +165,9 @@ public class Edge : MonoBehaviour
                 GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/directedselfedge");
                 GetComponent<BoxCollider2D>().size = new Vector2(1, 1);
                 GetComponent<BoxCollider2D>().offset = new Vector2(-0.1f, -0.1f);
+                weightInput.transform.position = transform.position;
             }
         }
-        weightInput.transform.position = transform.position;
     }
 
     public void SetColor(Color color)

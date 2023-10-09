@@ -5,6 +5,19 @@ using UnityEngine.SceneManagement;
 
 public class Menu : MonoBehaviour
 {
+    private Camera screenCamera;
+    public Camera ScreenCamera
+    {
+        get
+        {
+            if (screenCamera == null)
+            {
+                screenCamera = Camera.main;
+            }
+            return screenCamera;
+        }
+    }
+
     // Start is called before the first frame update
     void Start()
     {
