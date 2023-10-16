@@ -18,7 +18,7 @@ public class Arrow<T> : Connector<T> where T : MonoBehaviour
             transform.rotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
             float scale = (Vector3.Distance(source.transform.position, destination.transform.position) - 2) / 5f;
             transform.localScale = new Vector3(scale, 1, 1);
-            GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/directededge");
+            GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/directededgestraight");
         }
         else
         {
