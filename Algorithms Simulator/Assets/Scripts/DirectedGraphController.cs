@@ -45,6 +45,7 @@ public class DirectedGraphController : MonoBehaviour
     private Vector3 prevMousePosition;
     private bool paused;
     private bool stepping;
+    private bool guiding;
 
     private GraphVertex sourceVertex;
 
@@ -63,6 +64,10 @@ public class DirectedGraphController : MonoBehaviour
     [SerializeField] private GameObject pause;
     [SerializeField] private GameObject step;
     [SerializeField] private GameObject pauseText;
+    [SerializeField] private GameObject guide;
+    [SerializeField] private List<GameObject> guidePages;
+    [SerializeField] private GameObject forwardButton;
+    [SerializeField] private GameObject backwardButton;
 
     private bool weighted = true;
     public bool Weighted
@@ -96,6 +101,12 @@ public class DirectedGraphController : MonoBehaviour
         runtimeUI.SetActive(false);
         dfsKey.SetActive(false);
         endButton.SetActive(false);
+        foreach (GameObject g in guidePages)
+        {
+            g.SetActive(false);
+        }
+
+        guide.SetActive(false);
     }
 
     // Update is called once per frame
@@ -301,7 +312,17 @@ public class DirectedGraphController : MonoBehaviour
 
     public void Back()
     {
-        if (selectingPhase)
+        if (guiding)
+        {
+            foreach (GameObject g in guidePages)
+            {
+                g.SetActive(false);
+            }
+            guide.SetActive(false);
+            createGraphUI.SetActive(true);
+            guiding = false;
+        }
+        else if (selectingPhase)
         {
             algsMenu.SetActive(true);
             currentAlgorithm = null;
@@ -316,6 +337,50 @@ public class DirectedGraphController : MonoBehaviour
         else
         {
             UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
+        }
+    }
+    
+    public void OpenGuide()
+    {
+        guide.SetActive(true);
+        guidePages[0].SetActive(true);
+        forwardButton.GetComponent<Button>().interactable = true;
+        backwardButton.GetComponent<Button>().interactable = false;
+        createGraphUI.SetActive(false);
+        guiding = true;
+    }
+
+    public void GuideForward()
+    {
+        for (int i = 0; i < guidePages.Count - 1; i++)
+        {
+            if (guidePages[i].activeSelf)
+            {
+                guidePages[i + 1].SetActive(true);
+                guidePages[i].SetActive(false);
+                if (i + 1 == guidePages.Count - 1)
+                {
+                    forwardButton.GetComponent<Button>().interactable = false;
+                }
+                backwardButton.GetComponent<Button>().interactable = true;
+            }
+        }
+    }
+
+    public void GuideBackward()
+    {
+        for (int i = 1; i < guidePages.Count; i++)
+        {
+            if (guidePages[i].activeSelf)
+            {
+                guidePages[i - 1].SetActive(true);
+                guidePages[i].SetActive(false);
+                if (i - 1 == 0)
+                {
+                    backwardButton.GetComponent<Button>().interactable = false;
+                }
+                forwardButton.GetComponent<Button>().interactable = true;
+            }
         }
     }
 

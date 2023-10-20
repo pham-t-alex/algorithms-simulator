@@ -307,10 +307,12 @@ public class SortsController : MonoBehaviour
         backButton.SetActive(false);
         sourceText.SetActive(false);
         running = true;
+        (ListElement, ListElement) minMax = ElementMinMax();
         foreach (ListElement e in elements)
         {
             e.CreateInfoText();
-            e.SetColor(Color.white);
+            float relative = (minMax.Item2.ElementValue - e.ElementValue) / (minMax.Item2.ElementValue - minMax.Item1.ElementValue);
+            e.SetColor(new Color(1 - 0.3f * relative, 1 - 0.3f * relative, 1 - 0.3f * relative));
             e.SetMovement(Vector3.zero);
         }
         paused = false;
@@ -726,6 +728,9 @@ public class SortsController : MonoBehaviour
 
     public IEnumerator QuickSort()
     {
+        (ListElement, ListElement) minMax = ElementMinMax();
+        float min = minMax.Item1.ElementValue;
+        float max = minMax.Item2.ElementValue;
         SetLogText("");
         yield return new WaitForSeconds(3 / animationSpeed);
         yield return WaitUntilPlaying();
@@ -739,7 +744,7 @@ public class SortsController : MonoBehaviour
             {
                 if (tuple.Item1 == tuple.Item2)
                 {
-                    elements[tuple.Item1].SetColor(new Color(0.6f, 0.6f, 0.6f));
+                    elements[tuple.Item1].SetColor(new Color(0.5f, 0.5f, 0.5f));
                     yield return new WaitForSeconds(1f / animationSpeed);
                 }
                 continue;
@@ -747,7 +752,7 @@ public class SortsController : MonoBehaviour
             List<ListElement> leftSide = new List<ListElement>();
             List<ListElement> rightSide = new List<ListElement>();
             ListElement pivot = elements[tuple.Item2];
-            pivot.SetColor(new Color(0.9f, 0.9f, 0.9f));
+            pivot.SetColor(new Color(1f, 0.8f, 0.8f));
             SetLogText("Partitioning: " + ListToString(elements, tuple.Item1, tuple.Item2 - 1) + " | Pivot: " + pivot.ToString());
             SelectOne(pivot);
             yield return new WaitForSeconds(2 / animationSpeed);
@@ -789,14 +794,16 @@ public class SortsController : MonoBehaviour
             }
             yield return SetNewPositions(pivot, tuple.Item1, tuple.Item2);
             yield return new WaitForSeconds(1 / animationSpeed);
-            pivot.SetColor(new Color(0.6f, 0.6f, 0.6f));
+            pivot.SetColor(new Color(0.5f, 0.5f, 0.5f));
             foreach (ListElement e in leftSide)
             {
-                e.SetColor(Color.white);
+                float relative = (max - e.ElementValue) / (max - min);
+                e.SetColor(new Color(1 - 0.3f * relative, 1 - 0.3f * relative, 1 - 0.3f * relative));
             }
             foreach (ListElement e in rightSide)
             {
-                e.SetColor(Color.white);
+                float relative = (max - e.ElementValue) / (max - min);
+                e.SetColor(new Color(1 - 0.3f * relative, 1 - 0.3f * relative, 1 - 0.3f * relative));
             }
             UnselectOne();
             SetLogText("");
@@ -1231,6 +1238,9 @@ public class SortsController : MonoBehaviour
     public IEnumerator QuickSelect()
     {
         SetLogText("");
+        (ListElement, ListElement) minMax = ElementMinMax();
+        float min = minMax.Item1.ElementValue;
+        float max = minMax.Item2.ElementValue;
         yield return new WaitForSeconds(3 / animationSpeed);
         yield return WaitUntilPlaying();
 
@@ -1243,7 +1253,7 @@ public class SortsController : MonoBehaviour
             {
                 if (tuple.Item1 == tuple.Item2)
                 {
-                    elements[tuple.Item1].SetColor(new Color(0.6f, 0.6f, 0.6f));
+                    elements[tuple.Item1].SetColor(new Color(0.5f, 0.5f, 0.5f));
                     yield return new WaitForSeconds(1f / animationSpeed);
                     if (tuple.Item1 == parameter - 1)
                     {
@@ -1257,7 +1267,7 @@ public class SortsController : MonoBehaviour
             List<ListElement> leftSide = new List<ListElement>();
             List<ListElement> rightSide = new List<ListElement>();
             ListElement pivot = elements[tuple.Item2];
-            pivot.SetColor(new Color(0.9f, 0.9f, 0.9f));
+            pivot.SetColor(new Color(1f, 0.8f, 0.8f));
             SetLogText("Partitioning: " + ListToString(elements, tuple.Item1, tuple.Item2 - 1) + " | Pivot: " + pivot.ToString());
             SelectOne(pivot);
             yield return new WaitForSeconds(2 / animationSpeed);
@@ -1310,14 +1320,16 @@ public class SortsController : MonoBehaviour
             }
             yield return SetNewPositions(pivot, tuple.Item1, tuple.Item2);
             yield return new WaitForSeconds(1 / animationSpeed);
-            pivot.SetColor(new Color(0.6f, 0.6f, 0.6f));
+            pivot.SetColor(new Color(0.5f, 0.5f, 0.5f));
             foreach (ListElement e in leftSide)
             {
-                e.SetColor(Color.white);
+                float relative = (max - e.ElementValue) / (max - min);
+                e.SetColor(new Color(1 - 0.3f * relative, 1 - 0.3f * relative, 1 - 0.3f * relative));
             }
             foreach (ListElement e in rightSide)
             {
-                e.SetColor(Color.white);
+                float relative = (max - e.ElementValue) / (max - min);
+                e.SetColor(new Color(1 - 0.3f * relative, 1 - 0.3f * relative, 1 - 0.3f * relative));
             }
             if (done)
             {
