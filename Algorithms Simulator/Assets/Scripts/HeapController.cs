@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
 public class HeapController : MonoBehaviour
 {
@@ -59,6 +60,7 @@ public class HeapController : MonoBehaviour
     private float animationSpeed = 1;
     private bool paused;
     private bool stepping;
+    private bool guiding;
 
     private List<HeapElement> elements = new List<HeapElement>();
 
@@ -84,6 +86,10 @@ public class HeapController : MonoBehaviour
     [SerializeField] private GameObject pause;
     [SerializeField] private GameObject step;
     [SerializeField] private GameObject pauseText;
+    [SerializeField] private GameObject guide;
+    [SerializeField] private List<GameObject> guidePages;
+    [SerializeField] private GameObject forwardButton;
+    [SerializeField] private GameObject backwardButton;
 
     private HeapElement sourceElement;
     private string currentAlg;
@@ -99,6 +105,12 @@ public class HeapController : MonoBehaviour
         addUI.SetActive(false);
         Unselect();
         UpdateHeapAsArray(null);
+        foreach (GameObject g in guidePages)
+        {
+            g.SetActive(false);
+        }
+
+        guide.SetActive(false);
     }
 
     // Update is called once per frame
@@ -298,7 +310,17 @@ public class HeapController : MonoBehaviour
 
     public void Back()
     {
-        if (selectingPhase)
+        if (guiding)
+        {
+            foreach (GameObject g in guidePages)
+            {
+                g.SetActive(false);
+            }
+            guide.SetActive(false);
+            defaultUI.SetActive(true);
+            heapAsArray.SetActive(true);
+            guiding = false;
+        } else if (selectingPhase)
         {
             sourceElement = null;
             currentAlg = null;
@@ -324,6 +346,52 @@ public class HeapController : MonoBehaviour
             UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
         }
     }
+
+    public void OpenGuide()
+    {
+        guide.SetActive(true);
+        guidePages[0].SetActive(true);
+        forwardButton.GetComponent<Button>().interactable = true;
+        backwardButton.GetComponent<Button>().interactable = false;
+        defaultUI.SetActive(false);
+        heapAsArray.SetActive(false);
+        guiding = true;
+    }
+
+    public void GuideForward()
+    {
+        for (int i = 0; i < guidePages.Count - 1; i++)
+        {
+            if (guidePages[i].activeSelf)
+            {
+                guidePages[i + 1].SetActive(true);
+                guidePages[i].SetActive(false);
+                if (i + 1 == guidePages.Count - 1)
+                {
+                    forwardButton.GetComponent<Button>().interactable = false;
+                }
+                backwardButton.GetComponent<Button>().interactable = true;
+            }
+        }
+    }
+
+    public void GuideBackward()
+    {
+        for (int i = 1; i < guidePages.Count; i++)
+        {
+            if (guidePages[i].activeSelf)
+            {
+                guidePages[i - 1].SetActive(true);
+                guidePages[i].SetActive(false);
+                if (i - 1 == 0)
+                {
+                    backwardButton.GetComponent<Button>().interactable = false;
+                }
+                forwardButton.GetComponent<Button>().interactable = true;
+            }
+        }
+    }
+
 
     public void ChangeAnimationSpeed(float f)
     {

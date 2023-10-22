@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
 public class SortsController : MonoBehaviour
 {
@@ -38,6 +39,7 @@ public class SortsController : MonoBehaviour
     private float animationSpeed = 1;
     private bool paused;
     private bool stepping;
+    private bool guiding;
 
     private List<ListElement> elements = new List<ListElement>();
     private HashSet<ListElement> nonIntegerElements = new HashSet<ListElement>();
@@ -59,6 +61,10 @@ public class SortsController : MonoBehaviour
     [SerializeField] private GameObject pause;
     [SerializeField] private GameObject step;
     [SerializeField] private GameObject pauseText;
+    [SerializeField] private GameObject guide;
+    [SerializeField] private List<GameObject> guidePages;
+    [SerializeField] private GameObject forwardButton;
+    [SerializeField] private GameObject backwardButton;
 
     [SerializeField] private List<GameObject> nonFloatAlgs = new List<GameObject>();
 
@@ -79,6 +85,12 @@ public class SortsController : MonoBehaviour
         endButton.SetActive(false);
         addUI.SetActive(false);
         Unselect();
+        foreach (GameObject g in guidePages)
+        {
+            g.SetActive(false);
+        }
+
+        guide.SetActive(false);
     }
 
     // Update is called once per frame
@@ -249,7 +261,17 @@ public class SortsController : MonoBehaviour
 
     public void Back()
     {
-        if (selectingPhase)
+        if (guiding)
+        {
+            foreach (GameObject g in guidePages)
+            {
+                g.SetActive(false);
+            }
+            guide.SetActive(false);
+            defaultUI.SetActive(true);
+            guiding = false;
+        }
+        else if (selectingPhase)
         {
             if (currentAlg == "Remove")
             {
@@ -290,6 +312,50 @@ public class SortsController : MonoBehaviour
         else
         {
             UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
+        }
+    }
+
+    public void OpenGuide()
+    {
+        guide.SetActive(true);
+        guidePages[0].SetActive(true);
+        forwardButton.GetComponent<Button>().interactable = true;
+        backwardButton.GetComponent<Button>().interactable = false;
+        defaultUI.SetActive(false);
+        guiding = true;
+    }
+
+    public void GuideForward()
+    {
+        for (int i = 0; i < guidePages.Count - 1; i++)
+        {
+            if (guidePages[i].activeSelf)
+            {
+                guidePages[i + 1].SetActive(true);
+                guidePages[i].SetActive(false);
+                if (i + 1 == guidePages.Count - 1)
+                {
+                    forwardButton.GetComponent<Button>().interactable = false;
+                }
+                backwardButton.GetComponent<Button>().interactable = true;
+            }
+        }
+    }
+
+    public void GuideBackward()
+    {
+        for (int i = 1; i < guidePages.Count; i++)
+        {
+            if (guidePages[i].activeSelf)
+            {
+                guidePages[i - 1].SetActive(true);
+                guidePages[i].SetActive(false);
+                if (i - 1 == 0)
+                {
+                    backwardButton.GetComponent<Button>().interactable = false;
+                }
+                forwardButton.GetComponent<Button>().interactable = true;
+            }
         }
     }
 

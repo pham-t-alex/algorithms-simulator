@@ -59,6 +59,7 @@ public class DisjointSetController : MonoBehaviour
     private float animationSpeed = 1;
     private bool paused;
     private bool stepping;
+    private bool guiding;
 
     private List<DisjointSetElement> disjointSetElements = new List<DisjointSetElement>();
     [SerializeField] private GameObject algButtons;
@@ -74,6 +75,10 @@ public class DisjointSetController : MonoBehaviour
     [SerializeField] private GameObject pause;
     [SerializeField] private GameObject step;
     [SerializeField] private GameObject pauseText;
+    [SerializeField] private GameObject guide;
+    [SerializeField] private List<GameObject> guidePages;
+    [SerializeField] private GameObject forwardButton;
+    [SerializeField] private GameObject backwardButton;
 
     private string currentAlgorithm;
     
@@ -89,6 +94,12 @@ public class DisjointSetController : MonoBehaviour
         runtimeUI.SetActive(false);
         endButton.SetActive(false);
         NotSelected();
+        foreach (GameObject g in guidePages)
+        {
+            g.SetActive(false);
+        }
+
+        guide.SetActive(false);
     }
 
     // Update is called once per frame
@@ -264,7 +275,17 @@ public class DisjointSetController : MonoBehaviour
 
     public void Back()
     {
-        if (selectingPhase)
+        if (guiding)
+        {
+            foreach (GameObject g in guidePages)
+            {
+                g.SetActive(false);
+            }
+            guide.SetActive(false);
+            algButtons.SetActive(true);
+            guiding = false;
+        }
+        else if (selectingPhase)
         {
             algButtons.SetActive(true);
             currentAlgorithm = null;
@@ -280,6 +301,50 @@ public class DisjointSetController : MonoBehaviour
         else
         {
             UnityEngine.SceneManagement.SceneManager.LoadScene("Menu");
+        }
+    }
+
+    public void OpenGuide()
+    {
+        guide.SetActive(true);
+        guidePages[0].SetActive(true);
+        forwardButton.GetComponent<Button>().interactable = true;
+        backwardButton.GetComponent<Button>().interactable = false;
+        algButtons.SetActive(false);
+        guiding = true;
+    }
+
+    public void GuideForward()
+    {
+        for (int i = 0; i < guidePages.Count - 1; i++)
+        {
+            if (guidePages[i].activeSelf)
+            {
+                guidePages[i + 1].SetActive(true);
+                guidePages[i].SetActive(false);
+                if (i + 1 == guidePages.Count - 1)
+                {
+                    forwardButton.GetComponent<Button>().interactable = false;
+                }
+                backwardButton.GetComponent<Button>().interactable = true;
+            }
+        }
+    }
+
+    public void GuideBackward()
+    {
+        for (int i = 1; i < guidePages.Count; i++)
+        {
+            if (guidePages[i].activeSelf)
+            {
+                guidePages[i - 1].SetActive(true);
+                guidePages[i].SetActive(false);
+                if (i - 1 == 0)
+                {
+                    backwardButton.GetComponent<Button>().interactable = false;
+                }
+                forwardButton.GetComponent<Button>().interactable = true;
+            }
         }
     }
 
@@ -492,7 +557,6 @@ public class DisjointSetController : MonoBehaviour
         }
         yield return new WaitForSeconds(2 / animationSpeed);
         yield return WaitUntilPlaying();
-        SetLogText("Union(" + element1.ElementName + ", " + element2.ElementName + ")");
         if (updatedArrow != null)
         {
             updatedArrow.SetColor(Color.white);
