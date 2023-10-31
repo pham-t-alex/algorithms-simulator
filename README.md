@@ -10,8 +10,8 @@ If you find an error or mistake, send me a dm on Discord: @a_fam
 * Disjoint sets
 * Heaps
 * Sorting algorithms
+* Undirected graphs
 
 ## Planned:
 * 2-3 / 2-3-4 Trees / B-Trees
-* Undirected graphs
 * Other QoL
