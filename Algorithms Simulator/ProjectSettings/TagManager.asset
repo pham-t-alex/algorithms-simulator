@@ -6,7 +6,9 @@ TagManager:
   tags:
   - Vertex
   - Edge
-  - WeightedButton
+  - DirWeighted
+  - UndirWeighted
+  - Directed
   layers:
   - Default
   - TransparentFX

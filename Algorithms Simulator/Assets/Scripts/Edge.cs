@@ -69,8 +69,15 @@ public class Edge : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        weightInput = Instantiate(Resources.Load<GameObject>("Prefabs/EdgeText"), transform.position + new Vector3(0, 0.2f), Quaternion.identity, GameObject.Find("UIWorld").transform).GetComponent<EdgeText>();
-        if (!DirectedGraphController.DirGraphController.Weighted)
+        if (directed)
+        {
+            weightInput = Instantiate(Resources.Load<GameObject>("Prefabs/EdgeText"), transform.position + new Vector3(0, 0.2f), Quaternion.identity, GameObject.Find("UIWorld").transform).GetComponent<EdgeText>();
+        }
+        else
+        {
+            weightInput = Instantiate(Resources.Load<GameObject>("Prefabs/EdgeText"), transform.position, Quaternion.identity, GameObject.Find("UIWorld").transform).GetComponent<EdgeText>();
+        }
+        if (!GraphController.GraphControl.Weighted)
         {
             HideWeight();
         }
@@ -137,23 +144,29 @@ public class Edge : MonoBehaviour
     {
         if (source != destination)
         {
+            transform.position = (source.transform.position + destination.transform.position) / 2f;
+            Vector3 direction = (destination.transform.position - source.transform.position).normalized;
+            float angle = Mathf.Asin(direction.y);
+            if (direction.x < 0)
+            {
+                angle = Mathf.PI - angle;
+            }
+            transform.rotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
+            float scale = (Vector3.Distance(source.transform.position, destination.transform.position) - 2) / 5f;
+            transform.localScale = new Vector3(scale, 1, 1);
             if (directed)
             {
-                transform.position = (source.transform.position + destination.transform.position) / 2f;
-                Vector3 direction = (destination.transform.position - source.transform.position).normalized;
-                float angle = Mathf.Asin(direction.y);
-                if (direction.x < 0)
-                {
-                    angle = Mathf.PI - angle;
-                }
-                transform.rotation = Quaternion.Euler(0, 0, angle * Mathf.Rad2Deg);
-                float scale = (Vector3.Distance(source.transform.position, destination.transform.position) - 2) / 5f;
-                transform.localScale = new Vector3(scale, 1, 1);
                 GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/directededge");
-                GetComponent<BoxCollider2D>().size = new Vector2(5, 0.2f);
                 GetComponent<BoxCollider2D>().offset = new Vector2(0, 0.2f); //curved edge; straight edge should be 0
                 weightInput.transform.position = transform.position + (transform.rotation * new Vector2(0, 0.2f));
             }
+            else
+            {
+                GetComponent<SpriteRenderer>().sprite = Resources.Load<Sprite>("Sprites/undirectededge");
+                GetComponent<BoxCollider2D>().offset = Vector2.zero;
+                weightInput.transform.position = transform.position;
+            }
+            GetComponent<BoxCollider2D>().size = new Vector2(5, 0.2f);
         }
         else
         {

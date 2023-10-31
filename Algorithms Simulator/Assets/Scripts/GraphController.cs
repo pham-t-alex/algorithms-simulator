@@ -5,18 +5,18 @@ using UnityEngine.EventSystems;
 using TMPro;
 using UnityEngine.UI;
 
-public class DirectedGraphController : MonoBehaviour
+public class GraphController : MonoBehaviour
 {
-    private static DirectedGraphController directedGraphController;
-    public static DirectedGraphController DirGraphController
+    private static GraphController graphController;
+    public static GraphController GraphControl
     {
         get
         {
-            if (directedGraphController == null)
+            if (graphController == null)
             {
-                directedGraphController = FindObjectOfType<DirectedGraphController>();
+                graphController = FindObjectOfType<GraphController>();
             }
-            return directedGraphController;
+            return graphController;
         }
     }
 
@@ -50,6 +50,7 @@ public class DirectedGraphController : MonoBehaviour
     private GraphVertex sourceVertex;
 
     [SerializeField] private GameObject weightedCheckmark;
+    [SerializeField] private GameObject directedCheckmark;
     [SerializeField] private GameObject createGraphUI;
     [SerializeField] private GameObject algsMenu;
     [SerializeField] private List<GameObject> algButtons;
@@ -60,6 +61,7 @@ public class DirectedGraphController : MonoBehaviour
     [SerializeField] private GameObject animSpeed;
     [SerializeField] private GameObject vertexSelected;
     [SerializeField] private GameObject dfsKey;
+    [SerializeField] private GameObject mstKey;
     [SerializeField] private GameObject endButton;
     [SerializeField] private GameObject pause;
     [SerializeField] private GameObject step;
@@ -78,6 +80,15 @@ public class DirectedGraphController : MonoBehaviour
         }
     }
 
+    private bool directed = true;
+    public bool Directed
+    {
+        get
+        {
+            return directed;
+        }
+    }
+
     public Vector3 MousePosition
     {
         get
@@ -89,7 +100,7 @@ public class DirectedGraphController : MonoBehaviour
     }
 
     private string currentAlgorithm;
-    private readonly string[] algsNeedingStart = { "BFS", "DFS", "BellmanFord", "Dijkstra", "DAGSSSP" };
+    private readonly string[] algsNeedingStart = { "BFS", "DFS", "BellmanFord", "Dijkstra", "DAGSSSP", "Prim" };
     private float animationSpeed = 1;
 
     // Start is called before the first frame update
@@ -100,6 +111,7 @@ public class DirectedGraphController : MonoBehaviour
         sourceVertexText.SetActive(false);
         runtimeUI.SetActive(false);
         dfsKey.SetActive(false);
+        mstKey.SetActive(false);
         endButton.SetActive(false);
         foreach (GameObject g in guidePages)
         {
@@ -174,7 +186,14 @@ public class DirectedGraphController : MonoBehaviour
     {
         Vector3 position = ScreenCamera.transform.position;
         position.z = 0;
-        edges.Add(Instantiate(Resources.Load<GameObject>("Prefabs/DirectedEdge"), position, Quaternion.identity, GameObject.Find("Edges").transform).GetComponent<Edge>());
+        if (directed)
+        {
+            edges.Add(Instantiate(Resources.Load<GameObject>("Prefabs/DirectedEdge"), position, Quaternion.identity, GameObject.Find("Edges").transform).GetComponent<Edge>());
+        }
+        else
+        {
+            edges.Add(Instantiate(Resources.Load<GameObject>("Prefabs/UndirectedEdge"), position, Quaternion.identity, GameObject.Find("Edges").transform).GetComponent<Edge>());
+        }
     }
 
     public void Freeze()
@@ -274,8 +293,23 @@ public class DirectedGraphController : MonoBehaviour
                         foundNothing = false;
                         if (edgeSourceSelected != null)
                         {
-                            selectedObject.GetComponent<Edge>().SetVertices(edgeSourceSelected, vertex);
-                            selectedObject.GetComponent<Edge>().SetColor(Color.white);
+                            Edge e = selectedObject.GetComponent<Edge>();
+                            if (directed)
+                            {
+                                selectedObject.GetComponent<Edge>().SetVertices(edgeSourceSelected, vertex);
+                            }
+                            else
+                            {
+                                VertexComparer vCompare = new VertexComparer();
+                                if (vCompare.Compare(edgeSourceSelected, vertex) <= 0) {
+                                    e.SetVertices(edgeSourceSelected, vertex);
+                                }
+                                else
+                                {
+                                    e.SetVertices(vertex, edgeSourceSelected);
+                                }
+                            }
+                            e.SetColor(Color.white);
                             selectedObject = null;
                             edgeSourceSelected.SetColor(Color.white);
                             edgeSourceSelected = null;
@@ -406,6 +440,22 @@ public class DirectedGraphController : MonoBehaviour
         }
     }
 
+    public void ToggleDirected()
+    {
+        directed = !directed;
+        directedCheckmark.SetActive(directed);
+        foreach (Edge e in edges)
+        {
+            e.Destroy();
+        }
+        foreach (GraphVertex v in vertices)
+        {
+            v.IncomingEdges.Clear();
+            v.OutgoingEdges.Clear();
+        }
+        edges = new List<Edge>();
+    }
+
     public void OpenAlgMenu()
     {
         algsMenu.SetActive(true);
@@ -413,9 +463,17 @@ public class DirectedGraphController : MonoBehaviour
 
         foreach (GameObject button in algButtons)
         {
-            if (button.tag == "WeightedButton")
+            if (button.tag == "Directed")
             {
-                button.GetComponent<UnityEngine.UI.Button>().interactable = weighted;
+                button.GetComponent<UnityEngine.UI.Button>().interactable = directed;
+            }
+            else if (button.tag == "DirWeighted")
+            {
+                button.GetComponent<UnityEngine.UI.Button>().interactable = directed && weighted;
+            }
+            else if (button.tag == "UndirWeighted")
+            {
+                button.GetComponent<UnityEngine.UI.Button>().interactable = !directed && weighted;
             }
         }
     }
@@ -454,6 +512,7 @@ public class DirectedGraphController : MonoBehaviour
 
         runtimeUI.SetActive(true);
         dfsKey.SetActive(false);
+        mstKey.SetActive(false);
         SetLogText("");
         paused = false;
         stepping = false;
@@ -487,7 +546,6 @@ public class DirectedGraphController : MonoBehaviour
             e.CreateInfoText();
             e.SetColor(Color.white);
         }
-        UnreverseEdges();
 
         InitializeAlgorithm();
 
@@ -521,6 +579,15 @@ public class DirectedGraphController : MonoBehaviour
                 break;
             case "DAGSSSP":
                 StartCoroutine(DAGSSSP());
+                break;
+            case "Kruskal":
+                StartCoroutine(Kruskal());
+                break;
+            case "Boruvka":
+                StartCoroutine(Boruvka());
+                break;
+            case "Prim":
+                StartCoroutine(Prim());
                 break;
         }
     }
@@ -585,6 +652,28 @@ public class DirectedGraphController : MonoBehaviour
                     v.AddVariable("fin.", -1);
                 }
                 break;
+            case "Kruskal":
+                foreach (GraphVertex v in vertices)
+                {
+                    v.AddVariable("rep.", v);
+                    v.AddVariable("size", 1);
+                }
+                break;
+            case "Boruvka":
+                foreach (GraphVertex v in vertices)
+                {
+                    v.AddVariable("edge", null);
+                    v.AddVariable("comp.", null);
+                }
+                break;
+            case "Prim":
+                foreach (GraphVertex v in vertices)
+                {
+                    v.AddVariable("key", float.PositiveInfinity);
+                    v.AddVariable("edge", null);
+                }
+                sourceVertex.SetVariable("key", 0f);
+                break;
         }
     }
 
@@ -621,6 +710,7 @@ public class DirectedGraphController : MonoBehaviour
         List<GraphVertex> newAddedElements = new List<GraphVertex>();
         List<GraphVertex> vertexQueue = new List<GraphVertex>();
         List<GraphVertex> previousVertices = new List<GraphVertex>();
+        HashSet<Edge> finishedEdges = new HashSet<Edge>();
         newAddedElements.Add(sourceVertex);
         vertexQueue.Add(sourceVertex);
         SetLogText(ListToString(vertexQueue, newAddedElements, "Queue"));
@@ -637,8 +727,20 @@ public class DirectedGraphController : MonoBehaviour
             yield return new WaitForSeconds(2 / animationSpeed);
             foreach (Edge e in currVertex.OutgoingEdges)
             {
-                e.SetColor(new Color(0.8f, 0.8f, 0.8f));
-                GraphVertex destination = e.Destination;
+                if (!finishedEdges.Contains(e))
+                {
+                    e.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                    finishedEdges.Add(e);
+                }
+                GraphVertex destination;
+                if (!directed && e.Destination == currVertex)
+                {
+                    destination = e.Source;
+                }
+                else
+                {
+                    destination = e.Destination;
+                }
                 if (!((bool) destination.GetVariable("disc.")))
                 {
                     e.SetColor(new Color(0.4f, 0, 1f));
@@ -706,6 +808,7 @@ public class DirectedGraphController : MonoBehaviour
 
     public IEnumerator DFS()
     {
+        HashSet<Edge> finishedEdges = new HashSet<Edge>();
         dfsKey.SetActive(true);
         SetLogText("Parentheses:");
         int time = 1;
@@ -761,13 +864,25 @@ public class DirectedGraphController : MonoBehaviour
             else
             {
                 Edge e = (Edge) obj;
-                GraphVertex v = e.Destination;
+                GraphVertex v;
+                if (!directed && previousVertex == e.Destination)
+                {
+                    v = e.Source;
+                }
+                else
+                {
+                    v = e.Destination;
+                }
 
                 if ((int) v.GetVariable("disc.") < 0)
                 {
                     v.SetVariable("pi", e.Source);
                     stack.Push(v);
                     e.SetColor(new Color(0.4f, 0f, 1f));
+                }
+                else if (finishedEdges.Contains(e))
+                {
+                    continue;
                 }
                 else if ((int) v.GetVariable("fin.") < 0)
                 {
@@ -781,6 +896,7 @@ public class DirectedGraphController : MonoBehaviour
                 {
                     e.SetColor(new Color(0, 0.8f, 0.4f));
                 }
+                finishedEdges.Add(e);
                 SetVertexSelected(v);
                 yield return new WaitForSeconds(1 / animationSpeed);
             }
@@ -1460,6 +1576,313 @@ public class DirectedGraphController : MonoBehaviour
         }
 
         yield return End();
+    }
+
+    public IEnumerator Kruskal()
+    {
+        List<Edge> currentEdge = new List<Edge>();
+        mstKey.SetActive(true);
+        edges.Sort(new EdgeWeightComparer());
+        List<Edge> treeEdges = new List<Edge>();
+        SetLogText("");
+        yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
+
+        foreach (Edge e in edges)
+        {
+            currentEdge.Add(e);
+            SetLogText(ListToString(edges, currentEdge, "Sorted Edges"));
+            currentEdge.Clear();
+            if (SetUnion(e.Source, e.Destination))
+            {
+                treeEdges.Add(e);
+                e.SetColor(new Color(0.4f, 0, 1));
+            }
+            else
+            {
+                e.SetColor(new Color(1, 0.75f, 0.75f));
+            }
+            foreach (GraphVertex v in vertices)
+            {
+                v.UpdateInfoText();
+            }
+            yield return new WaitForSeconds(2 / animationSpeed);
+            foreach (GraphVertex v in vertices)
+            {
+                v.UpdateInfoText();
+            }
+            yield return WaitUntilPlaying();
+        }
+        SetLogText(ListToString(edges, null, "Sorted Edges"));
+        yield return End();
+    }
+
+    public IEnumerator Boruvka()
+    {
+        List<Edge> tree = new List<Edge>();
+        mstKey.SetActive(true);
+        List<Edge> currentEdge = new List<Edge>();
+        GraphVertex previousVertex = null;
+        SetLogText("");
+        yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
+
+        while (tree.Count < vertices.Count - 1)
+        {
+            SetLogText("Forming components using tree edges");
+            foreach (GraphVertex v in vertices)
+            {
+                v.SetVariable("edge", null);
+                v.SetVariable("comp.", null);
+            }
+
+            Stack<GraphVertex> stack = new Stack<GraphVertex>();
+            foreach (GraphVertex vertex in vertices)
+            {
+                stack.Push(vertex);
+
+                while (stack.Count > 0)
+                {
+                    GraphVertex v = stack.Pop();
+                    if ((GraphVertex)v.GetVariable("comp.") == null)
+                    {
+                        SetVertexSelected(v);
+                        v.SetVariable("comp.", vertex);
+                        if (previousVertex != null)
+                        {
+                            previousVertex.UpdateInfoText();
+                        }
+                        previousVertex = v;
+                        v.UpdateInfoText();
+                        yield return new WaitForSeconds(1.5f / animationSpeed);
+                        for (int i = v.OutgoingEdges.Count - 1; i >= 0; i--)
+                        {
+                            if (tree.Contains(v.OutgoingEdges[i]))
+                            {
+                                if (v.OutgoingEdges[i].Destination == v)
+                                {
+                                    stack.Push(v.OutgoingEdges[i].Source);
+                                }
+                                else
+                                {
+                                    stack.Push(v.OutgoingEdges[i].Destination);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (previousVertex != null)
+            {
+                previousVertex.UpdateInfoText();
+            }
+            previousVertex = null;
+            NoVertexSelected();
+            GraphVertex prevVertex2 = null;
+            yield return WaitUntilPlaying();
+
+            foreach (Edge e in edges)
+            {
+                currentEdge.Add(e);
+                SetLogText(ListToString(edges, currentEdge, "Edges"));
+                currentEdge.Clear();
+                if (previousVertex != null)
+                {
+                    previousVertex.UpdateInfoText();
+                }
+                if (prevVertex2 != null)
+                {
+                    prevVertex2.UpdateInfoText();
+                }
+                previousVertex = null;
+                prevVertex2 = null;
+                if (e.Source.GetVariable("comp.") != e.Destination.GetVariable("comp."))
+                {
+                    e.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                    GraphVertex sourceComp = (GraphVertex)e.Source.GetVariable("comp.");
+                    GraphVertex destinationComp = (GraphVertex)e.Destination.GetVariable("comp.");
+                    if ((Edge)sourceComp.GetVariable("edge") == null)
+                    {
+                        sourceComp.SetVariable("edge", e);
+                        e.SetColor(new Color(0.7f, 0.5f, 1));
+                    }
+                    else if (e.Weight < ((Edge)sourceComp.GetVariable("edge")).Weight)
+                    {
+                        Edge prevEdge = (Edge)sourceComp.GetVariable("edge");
+                        sourceComp.SetVariable("edge", e);
+                        if ((Edge)prevEdge.Source.GetVariable("edge") != prevEdge && (Edge)prevEdge.Destination.GetVariable("edge") != prevEdge)
+                        {
+                            prevEdge.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                        }
+                        e.SetColor(new Color(0.7f, 0.5f, 1));
+                    }
+                    sourceComp.UpdateInfoText();
+                    previousVertex = sourceComp;
+
+                    if ((Edge)destinationComp.GetVariable("edge") == null)
+                    {
+                        destinationComp.SetVariable("edge", e);
+                        e.SetColor(new Color(0.7f, 0.5f, 1));
+                    }
+                    else if (e.Weight < ((Edge)destinationComp.GetVariable("edge")).Weight)
+                    {
+                        Edge prevEdge = (Edge)destinationComp.GetVariable("edge");
+                        destinationComp.SetVariable("edge", e);
+                        if ((Edge)prevEdge.Source.GetVariable("edge") != prevEdge && (Edge)prevEdge.Destination.GetVariable("edge") != prevEdge)
+                        {
+                            prevEdge.SetColor(new Color(0.8f, 0.8f, 0.8f));
+                        }
+                        e.SetColor(new Color(0.7f, 0.5f, 1));
+                    }
+                    destinationComp.UpdateInfoText();
+                    prevVertex2 = destinationComp;
+                }
+                else
+                {
+                    if (!tree.Contains(e))
+                    {
+                        e.SetColor(new Color(1, 0.75f, 0.75f));
+                    }
+                    
+                }
+                yield return new WaitForSeconds(2 / animationSpeed);
+                yield return WaitUntilPlaying();
+            }
+            SetLogText(ListToString(edges, null, "Edges"));
+
+            foreach (GraphVertex v in vertices)
+            {
+                if ((Edge)v.GetVariable("edge") != null && !tree.Contains((Edge)v.GetVariable("edge")))
+                {
+                    tree.Add((Edge)v.GetVariable("edge"));
+                    ((Edge)v.GetVariable("edge")).SetColor(new Color(0.4f, 0, 1));
+                }
+            }
+
+            yield return new WaitForSeconds(2 / animationSpeed);
+            foreach (Edge e in edges)
+            {
+                if (e.EdgeColor.b == 0.8f)
+                {
+                    e.SetColor(Color.white);
+                }
+            }
+            yield return WaitUntilPlaying();
+        }
+
+        yield return End();
+    }
+
+    public IEnumerator Prim()
+    {
+        PriorityQueue<GraphVertex> priorityQueue = new PriorityQueue<GraphVertex>();
+        mstKey.SetActive(true);
+        List<GraphVertex> highlights = new List<GraphVertex>();
+        GraphVertex previousVertex = null;
+        foreach (GraphVertex v in vertices)
+        {
+            priorityQueue.AddElement((float)v.GetVariable("key"), v);
+        }
+        SetLogText(PriorityQueueToString(priorityQueue, null, "P.Queue"));
+        yield return new WaitForSeconds(3 / animationSpeed);
+        yield return WaitUntilPlaying();
+
+        while (priorityQueue.Count > 0)
+        {
+            GraphVertex v = priorityQueue.Remove();
+            Edge edge = (Edge)v.GetVariable("edge");
+            if (edge != null)
+            {
+                edge.SetColor(new Color(0.4f, 0, 1));
+            }
+            SetVertexSelected(v);
+            SetLogText(PriorityQueueToString(priorityQueue, null, "P.Queue"));
+            yield return new WaitForSeconds(1 / animationSpeed);
+            foreach (Edge e in v.OutgoingEdges)
+            {
+                if (previousVertex != null)
+                {
+                    previousVertex.UpdateInfoText();
+                }
+                previousVertex = null;
+                List<GraphVertex> qElements = priorityQueue.Elements();
+                GraphVertex destination;
+                if (e.Destination == v)
+                {
+                    destination = e.Source;
+                }
+                else
+                {
+                    destination = e.Destination;
+                }
+                if (qElements.Contains(destination))
+                {
+                    if (e.Weight < (float)destination.GetVariable("key"))
+                    {
+                        Edge prevEdge = (Edge)destination.GetVariable("edge");
+                        if (prevEdge != null)
+                        {
+                            prevEdge.SetColor(new Color(1, 0.75f, 0.75f));
+                        }
+                        e.SetColor(new Color(0.7f, 0.5f, 1));
+                        destination.SetVariable("edge", e);
+                        destination.SetVariable("key", e.Weight);
+                        destination.UpdateInfoText();
+                        previousVertex = destination;
+                        priorityQueue.DecreaseKey(e.Weight, destination);
+                        highlights.Add(destination);
+                    }
+                    else
+                    {
+                        e.SetColor(new Color(1, 0.75f, 0.75f));
+                    }
+                    SetLogText(PriorityQueueToString(priorityQueue, highlights, "P.Queue"));
+                    yield return new WaitForSeconds(1.5f / animationSpeed);
+                }
+                SetLogText(PriorityQueueToString(priorityQueue, highlights, "P.Queue"));
+                yield return new WaitForSeconds(0.5f / animationSpeed);
+                highlights.Clear();
+            }
+            yield return new WaitForSeconds(1 / animationSpeed);
+            yield return WaitUntilPlaying();
+        }
+        NoVertexSelected();
+        yield return End();
+    }
+
+    public GraphVertex FindRep(GraphVertex v)
+    {
+        Stack<GraphVertex> stack = new Stack<GraphVertex>();
+        while ((GraphVertex) v.GetVariable("rep.") != v)
+        {
+            stack.Push(v);
+            v = (GraphVertex) v.GetVariable("rep.");
+        }
+        
+        while (stack.Count > 0)
+        {
+            stack.Pop().SetVariable("rep.", v);
+        }
+        return v;
+    }
+
+    public bool SetUnion(GraphVertex v1, GraphVertex v2)
+    {
+        GraphVertex rep1 = FindRep(v1);
+        GraphVertex rep2 = FindRep(v2);
+        if (rep1 == rep2)
+        {
+            return false;
+        }
+        if ((int) rep1.GetVariable("size") > (int) rep2.GetVariable("size"))
+        {
+            GraphVertex temp = rep1;
+            rep1 = rep2;
+            rep2 = temp;
+        }
+        rep1.SetVariable("rep.", rep2);
+        rep2.SetVariable("size", (int)rep2.GetVariable("size") + (int)rep1.GetVariable("size"));
+        return true;
     }
 
     public IEnumerator End()

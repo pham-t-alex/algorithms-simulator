@@ -20,7 +20,7 @@ public abstract class InputText : MonoBehaviour
     {
         if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "GraphAlgs")
         {
-            DirectedGraphController.DirGraphController.Freeze();
+            GraphController.GraphControl.Freeze();
         }
         else if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "DisjointSet")
         {
@@ -40,7 +40,7 @@ public abstract class InputText : MonoBehaviour
     {
         if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "GraphAlgs")
         {
-            DirectedGraphController.DirGraphController.Unfreeze();
+            GraphController.GraphControl.Unfreeze();
         }
         else if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "DisjointSet")
         {
